@@ -64,6 +64,8 @@ def check_broadband_renewals():
                 contract_end=contract.contract_end,
                 days_remaining=days_remaining,
                 contact_name=contract.contact_name,
+                renewal_cycle=contract.renewal_cycle,
+                renewal_cost=contract.renewal_cost,
                 annual_cost=contract.annual_cost,
             )
 

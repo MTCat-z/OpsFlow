@@ -14,6 +14,7 @@ from datetime import date
 import httpx
 
 from app.core.config import settings
+from app.models.broadband import RENEWAL_CYCLE_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -73,14 +74,17 @@ def send_renewal_reminder(
     contract_end: date,
     days_remaining: int,
     contact_name: Optional[str],
-    annual_cost: Optional[float],
+    renewal_cycle: str = 'annual',
+    renewal_cost: Optional[float] = None,
+    annual_cost: Optional[float] = None,
 ) -> bool:
     """发送宽带续费提醒"""
-    urgency = '紧急' if days_remaining <= 7 else '提醒'
-    title = f'{urgency} 宽带续费提醒'
+    urgency = '⚠️ 紧急' if days_remaining <= 7 else '📋 提醒'
+    cycle_label = RENEWAL_CYCLE_LABELS.get(renewal_cycle, '每年')
+    title = f'宽带续费提醒'
 
     lines = [
-        f'### {title}',
+        f'### {urgency} 宽带续费提醒',
         '',
         f'- **运营商**: {provider}',
     ]
@@ -88,15 +92,18 @@ def send_renewal_reminder(
         lines.append(f'- **线路编号**: {circuit_id}')
     lines.extend([
         f'- **带宽**: {bandwidth_mbps} Mbps',
+        f'- **续费周期**: {cycle_label}',
     ])
+    if renewal_cost is not None:
+        lines.append(f'- **周期费用**: {renewal_cost:.2f} 元/{cycle_label}')
+    if annual_cost is not None:
+        lines.append(f'- **年度费用**: {annual_cost:.2f} 元/年')
     if location:
         lines.append(f'- **位置**: {location}')
     lines.extend([
         f'- **到期日期**: {contract_end.strftime("%Y-%m-%d")}',
         f'- **剩余天数**: **{days_remaining} 天**',
     ])
-    if annual_cost is not None:
-        lines.append(f'- **年费**: {annual_cost:.2f} 元')
     if contact_name:
         lines.append(f'- **联系人**: {contact_name}')
 

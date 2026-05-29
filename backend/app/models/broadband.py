@@ -3,13 +3,40 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 
+# 续费周期映射（月数）
+RENEWAL_CYCLE_MONTHS = {
+    'monthly': 1,
+    'quarterly': 3,
+    'semi_annual': 6,
+    'annual': 12,
+}
+
+RENEWAL_CYCLE_LABELS = {
+    'monthly': '每月',
+    'quarterly': '每季度（3个月）',
+    'semi_annual': '每半年（6个月）',
+    'annual': '每年',
+}
+
+
+def calc_annual_cost(renewal_cost: Optional[float], renewal_cycle: str) -> Optional[float]:
+    """根据续费金额和周期自动计算年费"""
+    if renewal_cost is None:
+        return None
+    months = RENEWAL_CYCLE_MONTHS.get(renewal_cycle, 12)
+    return round(renewal_cost * (12 / months), 2)
+
+
 class BroadbandContractBase(SQLModel):
     provider: str = Field(..., max_length=100)
     circuit_id: Optional[str] = Field(default=None, max_length=100)
     bandwidth_mbps: int = Field(...)
     location: Optional[str] = Field(default=None, max_length=200)
-    monthly_cost: Optional[float] = Field(default=None)
-    annual_cost: Optional[float] = Field(default=None)
+    # 续费周期 & 金额
+    renewal_cycle: str = Field(default='annual', max_length=20)  # monthly/quarterly/semi_annual/annual
+    renewal_cost: Optional[float] = Field(default=None)  # 每周期续费金额
+    annual_cost: Optional[float] = Field(default=None)   # 年度费用（可自动计算，也支持手动填写）
+    monthly_cost: Optional[float] = Field(default=None)   # 保留，月费
     contract_start: date = Field(...)
     contract_end: date = Field(...)
     auto_renew: bool = Field(default=False)
@@ -37,8 +64,10 @@ class BroadbandContractUpdate(SQLModel):
     circuit_id: Optional[str] = None
     bandwidth_mbps: Optional[int] = None
     location: Optional[str] = None
-    monthly_cost: Optional[float] = None
+    renewal_cycle: Optional[str] = None
+    renewal_cost: Optional[float] = None
     annual_cost: Optional[float] = None
+    monthly_cost: Optional[float] = None
     contract_start: Optional[date] = None
     contract_end: Optional[date] = None
     auto_renew: Optional[bool] = None

@@ -15,6 +15,10 @@ def _migrate_columns():
             ('ssh_private_key_encrypted', 'VARCHAR'),
             ('auth_type', "VARCHAR(20) DEFAULT 'password'"),
         ],
+        'broadband_contracts': [
+            ('renewal_cycle', "VARCHAR(20) DEFAULT 'annual'"),
+            ('renewal_cost', 'FLOAT'),
+        ],
     }
     with engine.connect() as conn:
         for table, columns in _MIGRATIONS.items():

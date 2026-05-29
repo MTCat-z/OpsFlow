@@ -6,6 +6,7 @@ from app.core.database import get_session
 from app.models.broadband import (
     BroadbandContract, BroadbandContractCreate,
     BroadbandContractUpdate, BroadbandContractRead,
+    RENEWAL_CYCLE_MONTHS, calc_annual_cost,
 )
 from app.services.dingtalk import send_renewal_reminder, send_test_message
 
@@ -56,6 +57,9 @@ def list_contracts(
 
 @router.post('', response_model=BroadbandContractRead, status_code=201)
 def create_contract(data: BroadbandContractCreate, session: Session = Depends(get_session)):
+    # 如果 renewal_cost 有值但 annual_cost 没填，自动计算年费
+    if data.renewal_cost is not None and data.annual_cost is None:
+        data.annual_cost = calc_annual_cost(data.renewal_cost, data.renewal_cycle or 'annual')
     contract = BroadbandContract.model_validate(data)
     session.add(contract)
     session.commit()
@@ -77,6 +81,15 @@ def update_contract(contract_id: int, data: BroadbandContractUpdate, session: Se
     if not contract:
         raise HTTPException(404, '合同不存在')
     update_data = data.model_dump(exclude_unset=True)
+    
+    # 如果更新了 renewal_cost 或 renewal_cycle 但没更新 annual_cost，自动计算
+    cost_changed = 'renewal_cost' in update_data or 'renewal_cycle' in update_data
+    if cost_changed and 'annual_cost' not in update_data:
+        new_cost = update_data.get('renewal_cost', contract.renewal_cost)
+        new_cycle = update_data.get('renewal_cycle', contract.renewal_cycle)
+        if new_cost is not None:
+            update_data['annual_cost'] = calc_annual_cost(new_cost, new_cycle)
+    
     for k, v in update_data.items():
         setattr(contract, k, v)
     contract.updated_at = datetime.utcnow()
@@ -110,6 +123,8 @@ def test_notify(contract_id: int, session: Session = Depends(get_session)):
         contract_end=contract.contract_end,
         days_remaining=days_remaining,
         contact_name=contract.contact_name,
+        renewal_cycle=contract.renewal_cycle,
+        renewal_cost=contract.renewal_cost,
         annual_cost=contract.annual_cost,
     )
     if ok:

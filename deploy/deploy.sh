@@ -118,9 +118,12 @@ EOF
 #  服务管理命令
 # ============================================================
 compose_cmd() {
-    local files="-f $PROJECT_DIR/docker-compose.yml"
+    local files
     if [[ "$IS_LINUX" == "true" ]]; then
-        files="$files -f $DEPLOY_DIR/docker-compose.linux.yml"
+        # Linux: 使用独立 compose 文件（不合并基础文件，避免 network_mode/networks 冲突）
+        files="-f $DEPLOY_DIR/docker-compose.linux.yml"
+    else
+        files="-f $PROJECT_DIR/docker-compose.yml"
     fi
     docker compose --project-directory "$PROJECT_DIR" $files "$@"
 }
@@ -562,10 +565,12 @@ deploy_services() {
     fi
 
     # 构建 Compose 命令
-    local compose_files="-f docker-compose.yml"
+    local compose_files
     if [[ "$IS_LINUX" == "true" && -f "$DEPLOY_DIR/docker-compose.linux.yml" ]]; then
-        compose_files="$compose_files -f deploy/docker-compose.linux.yml"
+        compose_files="-f deploy/docker-compose.linux.yml"
         info "使用 Linux 优化配置 (host 网络模式)"
+    else
+        compose_files="-f docker-compose.yml"
     fi
 
     cd "$PROJECT_DIR"

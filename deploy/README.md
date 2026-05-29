@@ -82,11 +82,11 @@ cp backend/.env.example backend/.env
 # 6. 编辑配置（至少修改密钥）
 vim backend/.env
 
-# 7. Linux 模式部署
-docker compose -f docker-compose.yml -f deploy/docker-compose.linux.yml up -d --build
+# 7. Linux 模式部署（使用独立 compose 文件，无需合并基础配置）
+docker compose -f deploy/docker-compose.linux.yml up -d --build
 
 # 8. 检查状态
-docker compose -f docker-compose.yml -f deploy/docker-compose.linux.yml ps
+docker compose -f deploy/docker-compose.linux.yml ps
 curl http://127.0.0.1:8000/api/health
 ```
 
@@ -187,7 +187,7 @@ Dockerfile.nginx 已配置淘宝镜像源 `registry.npmmirror.com`。如果仍�
 cd /opt/ops-platform
 git pull
 bash deploy/deploy.sh --backup     # 先备份
-docker compose -f docker-compose.yml -f deploy/docker-compose.linux.yml up -d --build
+docker compose -f deploy/docker-compose.linux.yml up -d --build
 ```
 
 **Q: 如何更换为 PostgreSQL/MySQL？**

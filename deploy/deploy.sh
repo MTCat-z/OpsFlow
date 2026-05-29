@@ -505,6 +505,48 @@ except ImportError:
 }
 
 # ============================================================
+#  Docker 镜像加速配置
+# ============================================================
+configure_docker_mirror() {
+    local daemon_json="/etc/docker/daemon.json"
+
+    # 备份现有配置
+    if [[ -f "$daemon_json" ]]; then
+        cp "$daemon_json" "${daemon_json}.bak.$(date +%s)"
+        info "已备份原配置: ${daemon_json}.bak.*"
+    fi
+
+    info "写入国内 Docker 镜像加速源..."
+    mkdir -p /etc/docker
+    cat > "$daemon_json" << 'MIRROR_EOF'
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.ccs.tencentyun.com"
+  ]
+}
+MIRROR_EOF
+
+    info "重启 Docker 守护进程..."
+    systemctl daemon-reload
+    systemctl restart docker
+    sleep 3
+
+    # 验证 Docker 已恢复
+    local retry=0
+    while ! docker info &>/dev/null 2>&1; do
+        retry=$((retry + 1))
+        if [[ $retry -ge 15 ]]; then
+            error "Docker 重启超时"
+            exit 1
+        fi
+        sleep 2
+    done
+    success "Docker 已重启，镜像加速已生效"
+}
+
+# ============================================================
 #  阶段 4: 构建并启动服务
 # ============================================================
 deploy_services() {
@@ -528,15 +570,22 @@ deploy_services() {
 
     cd "$PROJECT_DIR"
 
-    # 拉取基础镜像
-    info "拉取基础镜像..."
-    docker pull redis:7-alpine
-    docker pull python:3.11-slim
-    docker pull node:18-alpine
+    # 尝试预拉取基础镜像（非关键，失败不影响后续构建）
+    info "尝试拉取基础镜像（失败可忽略，构建时会自动拉取）..."
+    for img in redis:7-alpine python:3.11-slim node:18-alpine; do
+        docker pull "$img" 2>/dev/null && success "$img 就绪" || warn "$img 预拉取失败，构建时重试"
+    done
 
     # 构建 & 启动
     info "构建镜像并启动服务（首次可能需要 5-10 分钟）..."
-    docker compose $compose_files up -d --build
+    if ! docker compose $compose_files up -d --build; then
+        error "构建失败，可能是 Docker 镜像源限流"
+        echo ""
+        info "尝试配置国内 Docker 镜像加速..."
+        configure_docker_mirror
+        info "重新构建..."
+        docker compose $compose_files up -d --build
+    fi
 
     success "所有服务已启动"
 

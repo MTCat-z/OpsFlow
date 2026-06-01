@@ -65,6 +65,15 @@ export const broadbandApi = {
   delete: (id) => request.delete('/broadband/' + id),
   dashboard: () => request.get('/broadband/dashboard'),
   testNotify: (id) => request.post('/broadband/' + id + '/test-notify'),
+  // 导入导出
+  downloadTemplate: () => request.get('/broadband/export/template', { responseType: 'blob' }),
+  importExcel: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request.post('/broadband/import/excel', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
 }
 
 // 网络拓扑

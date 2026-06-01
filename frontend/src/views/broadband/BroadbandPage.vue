@@ -17,6 +17,8 @@
             <el-form-item><el-button type="primary" @click="loadData">搜索</el-button></el-form-item>
           </el-form>
           <el-button type="primary" @click="openCreate">新增宽带</el-button>
+          <el-button @click="downloadTemplate">下载模板</el-button>
+          <el-button type="success" @click="importDlg = true">导入 Excel</el-button>
         </el-row>
       </template>
       <el-table :data="tableData" v-loading="loading" stripe border>
@@ -102,14 +104,52 @@
       </el-form>
       <template #footer><el-button @click="dlg=false">取消</el-button><el-button type="primary" :loading="submitting" @click="submit">确定</el-button></template>
     </el-dialog>
+    <!-- 导入对话框 -->
+    <el-dialog v-model="importDlg" title="批量导入宽带合同" width="500px" :close-on-click-modal="false">
+      <el-alert type="info" :closable="false" style="margin-bottom:16px">
+        <template #title>
+          请先<a href="#" @click.prevent="downloadTemplate" style="color:#409eff">下载模板</a>，
+          按格式填写后上传 Excel 文件
+        </template>
+      </el-alert>
+      <el-upload
+        ref="uploadRef"
+        :auto-upload="false"
+        :show-file-list="true"
+        :limit="1"
+        accept=".xlsx,.xls"
+        @change="onFileChange"
+      >
+        <template #trigger>
+          <el-button type="primary">选择文件</el-button>
+        </template>
+        <span style="margin-left:12px;font-size:13px;color:#999">仅支持 .xlsx 格式</span>
+      </el-upload>
+      <div v-if="importResult" style="margin-top:16px">
+        <el-alert
+          :title="importResult.message"
+          :type="importResult.errors?.length ? 'warning' : 'success'"
+          :closable="false"
+        />
+        <div v-if="importResult.errors?.length" style="margin-top:8px;max-height:200px;overflow:auto">
+          <p v-for="(e, i) in importResult.errors" :key="i" style="font-size:13px;color:#e6a23c;margin:2px 0">{{ e }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="importDlg = false; importResult = null">关闭</el-button>
+        <el-button type="primary" :loading="importing" :disabled="!selectedFile" @click="doImport">开始导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElUpload } from 'element-plus'
 import { broadbandApi } from '@/api'
 
 const loading = ref(false), submitting = ref(false), tableData = ref([]), total = ref(0), dlg = ref(false), editId = ref(null), formRef = ref(null)
+const importDlg = ref(false), importing = ref(false), selectedFile = ref(null), importResult = ref(null)
 const dashboard = reactive({ total: 0, active: 0, expired: 0, expiring_30d: 0, expiring_7d: 0, total_annual_cost: 0 })
 const query = reactive({ keyword: '', status: '', page: 1, size: 20 })
 const statusMap = { active: { label: '在用', type: 'success' }, expired: { label: '已过期', type: 'danger' }, cancelled: { label: '已取消', type: 'info' } }
@@ -204,6 +244,45 @@ async function testNotify(row) {
   } catch (e) {
     ElMessage.error('发送失败')
   } finally { row._notifying = false }
+}
+
+// ── 导入导出 ──
+async function downloadTemplate() {
+  try {
+    const blob = await broadbandApi.downloadTemplate()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '宽带合同导入模板.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('模板下载失败')
+  }
+}
+
+function onFileChange(uploadFile) {
+  selectedFile.value = uploadFile.raw
+  importResult.value = null
+}
+
+async function doImport() {
+  if (!selectedFile.value) return ElMessage.warning('请先选择文件')
+  importing.value = true
+  try {
+    const r = await broadbandApi.importExcel(selectedFile.value)
+    importResult.value = r
+    if (r.imported > 0) {
+      ElMessage.success(`成功导入 ${r.imported} 条记录`)
+      loadData()
+    }
+  } catch (e) {
+    ElMessage.error('导入失败，请检查文件格式')
+  } finally {
+    importing.value = false
+  }
 }
 
 onMounted(() => loadData())

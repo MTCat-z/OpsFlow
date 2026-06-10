@@ -11,7 +11,7 @@
           </div>
         </el-row>
       </template>
-      <el-table :data="users" v-loading="loading" stripe border>
+      <el-table v-loading="loading" :data="users" stripe border>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="username" label="用户名" min-width="150" />
         <el-table-column prop="role" label="角色" width="100">
@@ -47,7 +47,7 @@
         <el-form-item label="用户名">
           <el-input v-model="form.username" :disabled="isEdit" />
         </el-form-item>
-        <el-form-item label="密码" v-if="!isEdit">
+        <el-form-item v-if="!isEdit" label="密码">
           <el-input v-model="form.password" type="password" placeholder="至少 6 位" show-password />
         </el-form-item>
         <el-form-item label="角色">
@@ -56,7 +56,7 @@
             <el-option label="管理员" value="admin" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态" v-if="isEdit">
+        <el-form-item v-if="isEdit" label="状态">
           <el-switch v-model="form.is_active" active-text="启用" inactive-text="禁用" />
         </el-form-item>
       </el-form>
@@ -87,9 +87,8 @@ import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const currentUserId = computed(() => {
-  const u = JSON.parse(localStorage.getItem('user') || 'null')
   // 从 users 列表中找到当前用户名对应的 id
-  return users.value.find(x => x.username === u?.username)?.id
+  return users.value.find(x => x.username === authStore.user?.username)?.id
 })
 
 const loading = ref(false), submitting = ref(false)
@@ -105,7 +104,7 @@ async function loadUsers() {
   try {
     const r = await userApi.list({ size: 100, keyword: keyword.value || undefined })
     users.value = r.items || []
-  } catch (e) { /* handled by interceptor */ }
+  } catch (_e) { /* handled by interceptor */ }
   finally { loading.value = false }
 }
 
@@ -135,7 +134,7 @@ async function handleSubmit() {
     }
     dlgVisible.value = false
     loadUsers()
-  } catch (e) { /* handled by interceptor */ }
+  } catch (_e) { /* handled by interceptor */ }
   finally { submitting.value = false }
 }
 
@@ -144,7 +143,7 @@ async function handleDelete(row) {
     await userApi.delete(row.id)
     ElMessage.success('用户已删除')
     loadUsers()
-  } catch (e) { /* handled by interceptor */ }
+  } catch (_e) { /* handled by interceptor */ }
 }
 
 function showResetPwd(row) {
@@ -158,7 +157,7 @@ async function handleResetPwd() {
     await userApi.resetPassword(resetPwdUser.value.id, { new_password: newPassword.value })
     ElMessage.success('密码已重置')
     resetPwdVisible.value = false
-  } catch (e) { /* handled by interceptor */ }
+  } catch (_e) { /* handled by interceptor */ }
   finally { submitting.value = false }
 }
 

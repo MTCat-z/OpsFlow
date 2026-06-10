@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-card shadow="never" style="margin-bottom:16px"><template #header>新建扫描任务</template>
-      <el-form :model="form" :rules="rules" ref="formRef" inline label-width="90px">
+      <el-form ref="formRef" :model="form" :rules="rules" inline label-width="90px">
         <el-form-item label="扫描目标" prop="target"><el-input v-model="form.target" placeholder="192.168.1.0/24" style="width:220px" /></el-form-item>
         <el-form-item label="扫描类型"><el-select v-model="form.scan_type" style="width:130px"><el-option label="存活探测" value="ping" /><el-option label="端口扫描" value="port" /><el-option label="服务探测" value="service" /><el-option label="全面扫描" value="full" /></el-select></el-form-item>
         <el-form-item label="端口范围"><el-input v-model="form.ports" placeholder="1-1024" style="width:120px" :disabled="form.scan_type==='ping'" /></el-form-item>
@@ -10,7 +10,7 @@
     </el-card>
     <el-card shadow="never">
       <template #header><el-row justify="space-between" align="middle"><span>扫描任务记录</span><el-button size="small" @click="loadTasks">刷新</el-button></el-row></template>
-      <el-table :data="tasks" v-loading="loading" stripe border>
+      <el-table v-loading="loading" :data="tasks" stripe border>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="target" label="目标" min-width="160" />
         <el-table-column prop="scan_type" label="类型" width="100" />

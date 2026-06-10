@@ -9,7 +9,7 @@
       </el-row>
     </el-card>
     <el-card shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe border>
+      <el-table v-loading="loading" :data="tableData" stripe border>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="设备名称" min-width="140" />
         <el-table-column prop="ip_address" label="IP地址" width="140" />
@@ -30,7 +30,7 @@
     </el-card>
     <!-- 新建/编辑对话框 -->
     <el-dialog v-model="dlg" :title="editId?'编辑资产':'新增资产'" width="680px" destroy-on-close>
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="90px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-row :gutter="16">
           <el-col :span="12"><el-form-item label="设备名称" prop="name"><el-input v-model="form.name" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="IP地址" prop="ip_address"><el-input v-model="form.ip_address" /></el-form-item></el-col>
@@ -51,7 +51,7 @@
           <el-col :span="12"><el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="密码"><el-input v-model="form.password" type="password" show-password /></el-form-item></el-col>
         </el-row>
-        <el-form-item label="SSH 私钥" v-if="form.auth_type !== 'password'">
+        <el-form-item v-if="form.auth_type !== 'password'" label="SSH 私钥">
           <el-input v-model="form.ssh_private_key" type="textarea" :rows="5" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----" style="font-family:monospace;font-size:12px" />
         </el-form-item>
       </el-form>
@@ -62,14 +62,14 @@
       <el-descriptions :column="1" border>
         <el-descriptions-item label="认证方式">{{ authTypeLabel }}</el-descriptions-item>
         <el-descriptions-item label="用户名">{{ cred.username || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="密码" v-if="cred.auth_type !== 'key'">
+        <el-descriptions-item v-if="cred.auth_type !== 'key'" label="密码">
           <span style="font-family:monospace">{{ showPwd ? cred.password : '••••••••' }}</span>
           <el-button size="small" style="margin-left:8px" @click="showPwd=!showPwd">{{ showPwd ? '隐藏' : '显示' }}</el-button>
         </el-descriptions-item>
         <el-descriptions-item label="SSH 私钥">
           <el-tag v-if="cred.ssh_private_key" type="success" size="small">已配置</el-tag>
           <span v-else style="color:#999">未配置</span>
-          <el-button size="small" style="margin-left:8px" v-if="cred.ssh_private_key" @click="showKey=!showKey">{{ showKey ? '隐藏' : '查看' }}</el-button>
+          <el-button v-if="cred.ssh_private_key" size="small" style="margin-left:8px" @click="showKey=!showKey">{{ showKey ? '隐藏' : '查看' }}</el-button>
           <pre v-if="showKey && cred.ssh_private_key" style="margin-top:8px;font-size:11px;max-height:200px;overflow:auto;background:#f5f5f5;padding:8px;border-radius:4px">{{ cred.ssh_private_key }}</pre>
         </el-descriptions-item>
       </el-descriptions>
@@ -78,11 +78,9 @@
 </template>
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { assetApi } from '@/api'
 
-const router = useRouter()
 const loading = ref(false), submitting = ref(false), tableData = ref([]), total = ref(0)
 const dlg = ref(false), credDlg = ref(false), editId = ref(null), formRef = ref(null)
 const showPwd = ref(false), showKey = ref(false), cred = ref({})

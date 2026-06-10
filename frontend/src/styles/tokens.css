@@ -1,0 +1,85 @@
+:root {
+  /* ═══ 品牌色 ═══ */
+  --ops-brand: #001529;
+  --ops-brand-light: #003a70;
+  --ops-brand-lighter: #0050b3;
+
+  /* ═══ 语义色 ═══ */
+  --ops-success: #67c23a;
+  --ops-warning: #e6a23c;
+  --ops-danger: #f56c6c;
+  --ops-info: #409eff;
+
+  /* ═══ 中性色 ═══ */
+  --ops-text-primary: #333333;
+  --ops-text-secondary: #666666;
+  --ops-text-muted: #767676; /* 4.54:1 on #fff — WCAG AA */
+  --ops-text-disabled: #c0c4cc;
+
+  --ops-bg-page: #f5f7fa;
+  --ops-bg-card: #ffffff;
+  --ops-bg-elevated: #fafafa;
+  --ops-border: #f0f0f0;
+  --ops-border-dark: #dcdfe6;
+
+  /* ═══ 终端色 ═══ */
+  --ops-term-bg: #1e1e1e;
+  --ops-term-fg: #d4d4d4;
+  --ops-term-header: #2d2d2d;
+  --ops-term-border: #3c3c3c;
+
+  /* ═══ 间距 (4px 基数) ═══ */
+  --ops-space-1: 4px;
+  --ops-space-2: 8px;
+  --ops-space-3: 12px;
+  --ops-space-4: 16px;
+  --ops-space-5: 20px;
+  --ops-space-6: 24px;
+  --ops-space-8: 32px;
+  --ops-space-10: 40px;
+  --ops-space-12: 48px;
+
+  /* ═══ 圆角 ═══ */
+  --ops-radius-sm: 4px;
+  --ops-radius-md: 6px;
+  --ops-radius-lg: 12px;
+
+  /* ═══ 阴影 ═══ */
+  --ops-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ops-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --ops-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.3);
+
+  /* ═══ 过渡 ═══ */
+  --ops-transition-fast: 150ms ease;
+  --ops-transition-normal: 300ms ease;
+
+  /* ═══ 侧边栏 ═══ */
+  --ops-sidebar-width: 220px;
+  --ops-sidebar-collapsed: 64px;
+  --ops-sidebar-bg: var(--ops-brand);
+  --ops-sidebar-text: rgba(255, 255, 255, 0.65);
+  --ops-sidebar-text-active: #ffffff;
+  --ops-sidebar-header-h: 64px;
+
+  /* ═══ 顶栏 ═══ */
+  --ops-header-h: 56px;
+
+  /* ═══ 断点 ═══ */
+  --ops-bp-sm: 640px;
+  --ops-bp-md: 768px;
+  --ops-bp-lg: 1024px;
+  --ops-bp-xl: 1280px;
+  --ops-bp-2xl: 1536px;
+}
+
+/* ═══ 暗色模式 Token（预留） ═══ */
+[data-theme='dark'] {
+  --ops-bg-page: #141414;
+  --ops-bg-card: #1f1f1f;
+  --ops-bg-elevated: #262626;
+  --ops-text-primary: #e8e8e8;
+  --ops-text-secondary: #a6a6a6;
+  --ops-text-muted: #737373;
+  --ops-border: #303030;
+  --ops-border-dark: #434343;
+}

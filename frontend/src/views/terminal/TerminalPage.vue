@@ -4,7 +4,7 @@
       <span class="terminal-title">终端 — {{ assetName }}</span>
       <div class="terminal-actions">
         <el-tag :type="connected ? 'success' : 'danger'" size="small">{{ connected ? '已连接' : '已断开' }}</el-tag>
-        <el-button size="small" @click="reconnect" v-if="!connected">重连</el-button>
+        <el-button v-if="!connected" size="small" @click="reconnect">重连</el-button>
         <el-button size="small" @click="close">关闭</el-button>
       </div>
     </div>
@@ -14,6 +14,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { assetApi } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,7 +61,7 @@ function connectWs() {
   ws.onmessage = (e) => {
     term.write(e.data)
   }
-  ws.onclose = (e) => {
+  ws.onclose = (_e) => {
     connected.value = false
     term.write('\r\n\x1b[33m[连接已关闭]\x1b[0m\r\n')
   }
@@ -90,26 +91,26 @@ function handleResize() {
 }
 
 function reconnect() {
-  if (ws) { try { ws.close() } catch(e) {} }
+  if (ws) { try { ws.close() } catch(_e) { /* ignore */ } }
   term.clear()
   connectWs()
 }
 
 function close() {
-  if (ws) { try { ws.close() } catch(e) {} }
+  if (ws) { try { ws.close() } catch(_e) { /* ignore */ } }
   router.push('/assets')
 }
 
 onMounted(() => {
   initTerminal()
   // 尝试获取资产名称
-  fetch(`/api/v1/assets/${assetId}`).then(r => r.json()).then(d => {
+  assetApi.get(assetId).then(d => {
     if (d.name) assetName.value = `${d.name} (${d.ip_address})`
   }).catch(() => {})
 })
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  if (ws) try { ws.close() } catch(e) {}
+  if (ws) try { ws.close() } catch(_e) { /* ignore */ }
   if (term) term.dispose()
 })
 </script>

@@ -32,6 +32,8 @@ logs/
 node_modules/
 frontend/dist/
 frontend/.cache/
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts
 
 # IDE
 .idea/
@@ -50,3 +52,20 @@ frontend/nul
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule.db
+*.pid
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Data directory
+backend/data/
+
+# Python tools
+.mypy_cache/
+.ruff_cache/

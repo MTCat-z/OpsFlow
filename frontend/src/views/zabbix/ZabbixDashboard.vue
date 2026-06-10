@@ -13,7 +13,7 @@
     <!-- 问题列表 -->
     <el-card shadow="never" style="margin-bottom:16px">
       <template #header><el-row justify="space-between" align="middle"><span>活跃问题</span><el-button size="small" @click="loadData">刷新</el-button></el-row></template>
-      <el-table :data="problems" v-loading="loading" stripe border max-height="360">
+      <el-table v-loading="loading" :data="problems" stripe border max-height="360">
         <el-table-column label="严重级别" width="100"><template #default="{ row }"><el-tag :type="severityType(row.severity)" size="small">{{ severityLabel(row.severity) }}</el-tag></template></el-table-column>
         <el-table-column prop="name" label="问题名称" min-width="300" show-overflow-tooltip />
         <el-table-column prop="clock" label="时间" width="160"><template #default="{ row }">{{ formatTime(row.clock) }}</template></el-table-column>
@@ -57,7 +57,7 @@ async function loadData() {
     const p = await zabbixApi.problems()
     connStatus.value = p.zabbix_status
     problems.value = p.data || []
-  } catch (e) { connStatus.value = 'unavailable' }
+  } catch (_e) { connStatus.value = 'unavailable' }
   finally { loading.value = false }
 }
 

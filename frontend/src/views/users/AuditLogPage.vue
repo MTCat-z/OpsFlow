@@ -23,7 +23,7 @@
           </div>
         </el-row>
       </template>
-      <el-table :data="logs" v-loading="loading" stripe border>
+      <el-table v-loading="loading" :data="logs" stripe border>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="username" label="操作人" width="100" />
         <el-table-column prop="action" label="操作" width="80">
@@ -82,7 +82,7 @@ async function loadLogs() {
     const r = await auditApi.list(params)
     logs.value = r.items || []
     total.value = r.total || 0
-  } catch (e) { /* handled by interceptor */ }
+  } catch (_e) { /* handled by interceptor */ }
   finally { loading.value = false }
 }
 

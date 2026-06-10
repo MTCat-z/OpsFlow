@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-page-header @back="$router.push('/zabbix/hosts')" style="margin-bottom:16px"><template #content>主机详情 — {{ hostInfo.name || hostId }}</template></el-page-header>
+    <el-page-header style="margin-bottom:16px" @back="$router.push('/zabbix/hosts')"><template #content>主机详情 — {{ hostInfo.name || hostId }}</template></el-page-header>
     <el-alert v-if="connStatus !== 'ok'" :type="connStatus === 'cached' ? 'warning' : 'error'" :closable="false" style="margin-bottom:12px" :title="connStatus === 'cached' ? '显示缓存数据' : 'Zabbix 不可达'" />
     <el-alert v-if="loadError" type="error" :closable="false" style="margin-bottom:12px" :title="'数据加载失败: ' + loadError" />
     <!-- 主机信息 -->
@@ -13,7 +13,7 @@
       </el-descriptions>
     </el-card>
     <!-- 时间选择 -->
-    <el-row style="margin-bottom:12px"><el-radio-group v-model="period" @change="loadMetrics" size="small"><el-radio-button value="1h">1小时</el-radio-button><el-radio-button value="6h">6小时</el-radio-button><el-radio-button value="24h">24小时</el-radio-button><el-radio-button value="7d">7天</el-radio-button></el-radio-group></el-row>
+    <el-row style="margin-bottom:12px"><el-radio-group v-model="period" size="small" @change="loadMetrics"><el-radio-button value="1h">1小时</el-radio-button><el-radio-button value="6h">6小时</el-radio-button><el-radio-button value="24h">24小时</el-radio-button><el-radio-button value="7d">7天</el-radio-button></el-radio-group></el-row>
     <!-- 指标图表 -->
     <el-row :gutter="16">
       <el-col :span="12">

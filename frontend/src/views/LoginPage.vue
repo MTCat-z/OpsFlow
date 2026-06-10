@@ -5,7 +5,7 @@
         <h2>内网运维平台</h2>
         <p>请登录以继续</p>
       </div>
-      <el-form :model="form" :rules="rules" ref="formRef" @submit.prevent="handleLogin">
+      <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
         <el-form-item prop="username">
           <el-input v-model="form.username" placeholder="用户名" size="large" prefix-icon="User" />
         </el-form-item>
@@ -24,7 +24,6 @@
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -46,7 +45,7 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     const redirect = route.query.redirect || '/assets'
     router.push(redirect)
-  } catch (e) {
+  } catch (_e) {
     // 错误已由 axios 拦截器处理
   } finally {
     loading.value = false

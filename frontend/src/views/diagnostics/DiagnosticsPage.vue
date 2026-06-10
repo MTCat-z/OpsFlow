@@ -11,7 +11,7 @@
             <el-form-item><el-button type="primary" :loading="pingLoading" @click="doPing">执行</el-button></el-form-item>
           </el-form>
           <div v-if="pingResult">
-            <el-row :gutter="16" style="margin-bottom:16px" v-if="pingResult.stats">
+            <el-row v-if="pingResult.stats" :gutter="16" style="margin-bottom:16px">
               <el-col :span="6"><el-statistic title="发送" :value="pingResult.stats.sent ?? '-'" /></el-col>
               <el-col :span="6"><el-statistic title="接收" :value="pingResult.stats.received ?? '-'" /></el-col>
               <el-col :span="6"><el-statistic title="丢包率" :value="pingResult.stats.loss_percent ?? '-'" suffix="%" /></el-col>
@@ -29,7 +29,7 @@
             <el-form-item><el-button type="primary" :loading="traceLoading" @click="doTrace">执行</el-button></el-form-item>
           </el-form>
           <div v-if="traceResult">
-            <el-table :data="traceResult.hops" border stripe max-height="400" style="margin-bottom:16px" v-if="traceResult.hops.length">
+            <el-table v-if="traceResult.hops.length" :data="traceResult.hops" border stripe max-height="400" style="margin-bottom:16px">
               <el-table-column prop="hop" label="跳" width="60" align="center" />
               <el-table-column prop="hostname" label="主机名" min-width="160" />
               <el-table-column prop="ip" label="IP" width="140" />
@@ -54,12 +54,12 @@
             <el-form-item><el-button type="primary" :loading="dnsLoading" @click="doDns">查询</el-button></el-form-item>
           </el-form>
           <div v-if="dnsResult">
-            <el-table :data="dnsResult.records" border stripe max-height="300" style="margin-bottom:16px" v-if="dnsResult.records.length">
+            <el-table v-if="dnsResult.records.length" :data="dnsResult.records" border stripe max-height="300" style="margin-bottom:16px">
               <el-table-column prop="type" label="类型" width="80" />
               <el-table-column prop="value" label="值" min-width="300" />
               <el-table-column prop="ttl" label="TTL" width="80" align="center" />
             </el-table>
-            <pre class="output-block" v-if="dnsResult.output">{{ dnsResult.output }}</pre>
+            <pre v-if="dnsResult.output" class="output-block">{{ dnsResult.output }}</pre>
           </div>
         </el-tab-pane>
 
@@ -83,7 +83,7 @@
                 </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="延迟">{{ portResult.latency_ms != null ? portResult.latency_ms + 'ms' : '-' }}</el-descriptions-item>
-              <el-descriptions-item label="Banner" v-if="portResult.banner">{{ portResult.banner }}</el-descriptions-item>
+              <el-descriptions-item v-if="portResult.banner" label="Banner">{{ portResult.banner }}</el-descriptions-item>
             </el-descriptions>
             <pre class="output-block">{{ portResult.output }}</pre>
           </div>
@@ -97,7 +97,7 @@
             <el-form-item><el-button type="primary" :loading="mtrLoading" @click="doMtr">执行</el-button></el-form-item>
           </el-form>
           <div v-if="mtrResult">
-            <el-table :data="mtrResult.hops" border stripe max-height="400" style="margin-bottom:16px" v-if="mtrResult.hops.length">
+            <el-table v-if="mtrResult.hops.length" :data="mtrResult.hops" border stripe max-height="400" style="margin-bottom:16px">
               <el-table-column prop="hop" label="#" width="50" align="center" />
               <el-table-column prop="host" label="主机" min-width="140" />
               <el-table-column label="丢包%" width="80" align="center">

@@ -1,0 +1,134 @@
+@import './tokens.css';
+
+/* ═══ 全局重置 ═══ */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  color: var(--ops-text-primary);
+  background: var(--ops-bg-page);
+  line-height: 1.5;
+}
+
+/* ═══ 页面级工具类 ═══ */
+.ops-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ops-space-4);
+}
+
+.ops-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ops-card-header__title {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.ops-table-pagination {
+  margin-top: var(--ops-space-4);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ═══ 终端输出块 ═══ */
+.ops-output-block {
+  background: var(--ops-term-bg);
+  color: var(--ops-term-fg);
+  padding: var(--ops-space-4);
+  border-radius: var(--ops-radius-md);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ═══ 空状态 ═══ */
+.ops-empty-chart {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ops-text-muted);
+  font-size: 14px;
+  background: var(--ops-bg-elevated);
+  border-radius: var(--ops-radius-sm);
+}
+
+/* ═══ Skip Navigation ═══ */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: var(--ops-brand);
+  color: white;
+  border-radius: var(--ops-radius-sm);
+  text-decoration: none;
+  font-size: 14px;
+}
+.skip-link:focus {
+  top: 16px;
+}
+
+/* ═══ 焦点样式 ═══ */
+:focus-visible {
+  outline: 2px solid var(--ops-info);
+  outline-offset: 2px;
+}
+
+/* ═══ 减弱动画偏好 ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══ 响应式基础 ═══ */
+@media (max-width: 1023px) {
+  .app-sidebar {
+    width: var(--ops-sidebar-collapsed) !important;
+  }
+  .app-sidebar .app-sidebar__title,
+  .app-sidebar .el-menu-item span {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-sidebar {
+    position: fixed;
+    z-index: 1000;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform var(--ops-transition-normal);
+  }
+  .app-sidebar.is-open {
+    transform: translateX(0);
+  }
+}

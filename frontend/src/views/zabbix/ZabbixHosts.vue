@@ -3,7 +3,7 @@
     <el-alert v-if="connStatus !== 'ok'" :type="connStatus === 'cached' ? 'warning' : 'error'" :closable="false" style="margin-bottom:12px" :title="connStatus === 'cached' ? '显示缓存数据' : 'Zabbix 不可达'" />
     <el-card shadow="never">
       <template #header><el-row justify="space-between" align="middle"><span>监控主机列表</span><el-button size="small" @click="loadData">刷新</el-button></el-row></template>
-      <el-table :data="hosts" v-loading="loading" stripe border>
+      <el-table v-loading="loading" :data="hosts" stripe border>
         <el-table-column prop="name" label="主机名" min-width="160" />
         <el-table-column prop="ip" label="IP" width="140" />
         <el-table-column prop="status" label="状态" width="90"><template #default="{ row }"><el-tag :type="row.status==='active'?'success':'danger'" size="small">{{ row.status==='active'?'可用':'不可用' }}</el-tag></template></el-table-column>

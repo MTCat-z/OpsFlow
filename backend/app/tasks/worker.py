@@ -11,6 +11,10 @@ celery_app = Celery(
         'app.tasks.iperf_tasks',
         'app.tasks.broadband_tasks',
         'app.tasks.topology_tasks',
+        'app.tasks.inspection_tasks',
+        'app.tasks.config_backup_tasks',
+        'app.tasks.command_tasks',
+        'app.tasks.ipam_tasks',
     ],
 )
 
@@ -33,12 +37,28 @@ celery_app.conf.update(
         'app.tasks.iperf_tasks.*': {'queue': 'iperf'},
         'app.tasks.broadband_tasks.*': {'queue': 'default'},
         'app.tasks.topology_tasks.*': {'queue': 'topology'},
+        'app.tasks.inspection_tasks.*': {'queue': 'inspection'},
+        'app.tasks.config_backup_tasks.*': {'queue': 'config_backup'},
+        'app.tasks.command_tasks.*': {'queue': 'commands'},
+        'app.tasks.ipam_tasks.*': {'queue': 'ipam'},
     },
     task_default_queue='default',
     beat_schedule={
         'check-broadband-renewals-daily': {
             'task': 'app.tasks.broadband_tasks.check_broadband_renewals',
             'schedule': crontab(hour=9, minute=0),
+        },
+        'run-inspection-scheduled': {
+            'task': 'app.tasks.inspection_tasks.run_inspection_scheduled',
+            'schedule': crontab(hour=9, minute=0),
+        },
+        'run-config-backup-scheduled': {
+            'task': 'app.tasks.config_backup_tasks.run_config_backup_scheduled',
+            'schedule': crontab(hour=2, minute=0),
+        },
+        'discover-ipam-subnets-periodic': {
+            'task': 'app.tasks.ipam_tasks.discover_all_subnets',
+            'schedule': crontab(minute=0, hour='*/4'),
         },
     },
 )

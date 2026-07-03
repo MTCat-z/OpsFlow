@@ -43,7 +43,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=4 -Q default,scan,iperf,topology
+    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=4 -Q default,scan,iperf,topology,inspection,config_backup,commands,ipam
     volumes:
       - ./backend:/app
       - db_data:/app/data

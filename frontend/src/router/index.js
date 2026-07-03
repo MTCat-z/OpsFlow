@@ -10,17 +10,22 @@ const routes = [
   {
     path: '/',
     component: () => import('@/views/Layout.vue'),
-    redirect: '/assets',
+    redirect: '/dashboard',
     children: [
+      { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/DashboardPage.vue'), meta: { title: '运维数据大屏' } },
       { path: 'assets', name: 'Assets', component: () => import('@/views/assets/AssetList.vue'), meta: { title: '资产管理' } },
-      { path: 'scan', name: 'Scan', component: () => import('@/views/scan/ScanPage.vue'), meta: { title: 'Nmap扫描' } },
+      { path: 'scan', name: 'Scan', component: () => import('@/views/scan/ScanPage.vue'), meta: { title: 'Nmap 扫描' } },
       { path: 'iperf', name: 'Iperf', component: () => import('@/views/iperf/IperfPage.vue'), meta: { title: '性能测试' } },
       { path: 'broadband', name: 'Broadband', component: () => import('@/views/broadband/BroadbandPage.vue'), meta: { title: '宽带管理' } },
       { path: 'topology', name: 'Topology', component: () => import('@/views/topology/TopologyPage.vue'), meta: { title: '网络拓扑' } },
       { path: 'diagnostics', name: 'Diagnostics', component: () => import('@/views/diagnostics/DiagnosticsPage.vue'), meta: { title: '网络诊断' } },
-      { path: 'zabbix', name: 'Zabbix', component: () => import('@/views/zabbix/ZabbixDashboard.vue'), meta: { title: 'Zabbix监控' } },
-      { path: 'zabbix/hosts', name: 'ZabbixHosts', component: () => import('@/views/zabbix/ZabbixHosts.vue'), meta: { title: 'Zabbix主机' } },
-      { path: 'zabbix/hosts/:id', name: 'ZabbixHostDetail', component: () => import('@/views/zabbix/ZabbixHostDetail.vue'), meta: { title: 'Zabbix主机详情' } },
+      { path: 'zabbix', name: 'Zabbix', component: () => import('@/views/zabbix/ZabbixDashboard.vue'), meta: { title: 'Zabbix 监控' } },
+      { path: 'zabbix/hosts', name: 'ZabbixHosts', component: () => import('@/views/zabbix/ZabbixHosts.vue'), meta: { title: 'Zabbix 主机' } },
+      { path: 'zabbix/hosts/:id', name: 'ZabbixHostDetail', component: () => import('@/views/zabbix/ZabbixHostDetail.vue'), meta: { title: 'Zabbix 主机详情' } },
+      { path: 'inspection', name: 'Inspection', component: () => import('@/views/inspection/InspectionPage.vue'), meta: { title: '自动化巡检' } },
+      { path: 'config-backup', name: 'ConfigBackup', component: () => import('@/views/config-backup/ConfigBackupPage.vue'), meta: { title: '配置备份' } },
+      { path: 'commands', name: 'Commands', component: () => import('@/views/commands/CommandBatchPage.vue'), meta: { title: '批量命令执行' } },
+      { path: 'ipam', name: 'Ipam', component: () => import('@/views/ipam/IpamPage.vue'), meta: { title: 'IPAM' } },
       { path: 'users', name: 'Users', component: () => import('@/views/users/UserManagePage.vue'), meta: { title: '用户管理', admin: true } },
       { path: 'audit', name: 'Audit', component: () => import('@/views/users/AuditLogPage.vue'), meta: { title: '审计日志', admin: true } },
     ],
@@ -41,7 +46,6 @@ const routes = [
 
 const router = createRouter({ history: createWebHistory(), routes })
 
-// 安全解析 localStorage 中的用户信息
 function getUserFromStorage() {
   try {
     return JSON.parse(localStorage.getItem('user') || 'null')
@@ -50,23 +54,15 @@ function getUserFromStorage() {
   }
 }
 
-// 全局路由守卫
 router.beforeEach((to) => {
-  // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - OpsFlow` : 'OpsFlow'
 
   const token = localStorage.getItem('token')
   const user = getUserFromStorage()
 
-  // 公开页面直接放行
   if (to.meta.public) return true
-
-  // 未登录跳转到登录页
   if (!token) return { name: 'Login', query: { redirect: to.fullPath } }
-
-  // 需要管理员权限的页面
-  if (to.meta.admin && user?.role !== 'admin') return { path: '/assets' }
-
+  if (to.meta.admin && user?.role !== 'admin') return { path: '/dashboard' }
   return true
 })
 

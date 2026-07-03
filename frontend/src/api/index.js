@@ -105,3 +105,55 @@ export const zabbixApi = {
   dashboard: () => request.get('/zabbix/dashboard'),
   clearCache: () => request.post('/zabbix/cache/clear'),
 }
+
+export const dashboardApi = {
+  overview: () => request.get('/dashboard/overview'),
+}
+
+export const inspectionApi = {
+  dashboard: () => request.get('/inspection/dashboard'),
+  listPlans: (p) => request.get('/inspection/plans', { params: p }),
+  createPlan: (d) => request.post('/inspection/plans', d),
+  updatePlan: (id, d) => request.put('/inspection/plans/' + id, d),
+  deletePlan: (id) => request.delete('/inspection/plans/' + id),
+  runPlan: (id) => request.post('/inspection/plans/' + id + '/run'),
+  listRuns: (p) => request.get('/inspection/runs', { params: p }),
+  getRun: (id) => request.get('/inspection/runs/' + id),
+}
+
+export const configBackupApi = {
+  dashboard: () => request.get('/config-backup/dashboard'),
+  listJobs: (p) => request.get('/config-backup/jobs', { params: p }),
+  createJob: (d) => request.post('/config-backup/jobs', d),
+  updateJob: (id, d) => request.put('/config-backup/jobs/' + id, d),
+  deleteJob: (id) => request.delete('/config-backup/jobs/' + id),
+  runJob: (id) => request.post('/config-backup/jobs/' + id + '/run'),
+  listSnapshots: (p) => request.get('/config-backup/snapshots', { params: p }),
+  getSnapshot: (id) => request.get('/config-backup/snapshots/' + id),
+  getDiff: (id) => request.get('/config-backup/snapshots/' + id + '/diff'),
+}
+
+export const commandApi = {
+  dashboard: () => request.get('/commands/dashboard'),
+  listBatches: (p) => request.get('/commands/batches', { params: p }),
+  createBatch: (d) => request.post('/commands/batches', d),
+  updateBatch: (id, d) => request.put('/commands/batches/' + id, d),
+  getBatch: (id) => request.get('/commands/batches/' + id),
+  deleteBatch: (id) => request.delete('/commands/batches/' + id),
+  executeBatch: (id) => request.post('/commands/batches/' + id + '/execute'),
+  listResults: (id) => request.get('/commands/batches/' + id + '/results'),
+}
+
+export const ipamApi = {
+  dashboard: () => request.get('/ipam/dashboard'),
+  listSubnets: (p) => request.get('/ipam/subnets', { params: p }),
+  createSubnet: (d) => request.post('/ipam/subnets', d),
+  updateSubnet: (id, d) => request.put('/ipam/subnets/' + id, d),
+  deleteSubnet: (id) => request.delete('/ipam/subnets/' + id),
+  discoverSubnet: (id) => request.post('/ipam/subnets/' + id + '/discover'),
+  listAddresses: (p) => request.get('/ipam/addresses', { params: p }),
+  createAddress: (d) => request.post('/ipam/addresses', d),
+  updateAddress: (id, d) => request.put('/ipam/addresses/' + id, d),
+  deleteAddress: (id) => request.delete('/ipam/addresses/' + id),
+  listConflicts: () => request.get('/ipam/conflicts'),
+}

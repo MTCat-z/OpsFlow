@@ -38,12 +38,12 @@ class BroadbandContractBase(SQLModel):
     annual_cost: Optional[float] = Field(default=None)   # 年度费用（可自动计算，也支持手动填写）
     monthly_cost: Optional[float] = Field(default=None)   # 保留，月费
     contract_start: date = Field(...)
-    contract_end: date = Field(...)
+    contract_end: date = Field(..., index=True)
     auto_renew: bool = Field(default=False)
     contact_name: Optional[str] = Field(default=None, max_length=50)
     contact_phone: Optional[str] = Field(default=None, max_length=30)
     reminder_days: str = Field(default='30,15,7', max_length=100)
-    status: str = Field(default='active', max_length=20)
+    status: str = Field(default='active', max_length=20, index=True)
     notes: Optional[str] = Field(default=None, max_length=2000)
 
 

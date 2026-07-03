@@ -4,7 +4,7 @@ from sqlmodel import Field, SQLModel
 
 class AssetBase(SQLModel):
     name: str = Field(..., max_length=100)
-    ip_address: str = Field(..., max_length=50)
+    ip_address: str = Field(..., max_length=50, index=True)
     device_type: Optional[str] = Field(default=None, max_length=50)
     model: Optional[str] = Field(default=None, max_length=100)
     location: Optional[str] = Field(default=None, max_length=200)
@@ -13,7 +13,7 @@ class AssetBase(SQLModel):
     os: Optional[str] = Field(default=None, max_length=100)
     tags: Optional[str] = Field(default=None, max_length=500)
     notes: Optional[str] = Field(default=None, max_length=2000)
-    status: str = Field(default='active', max_length=20)
+    status: str = Field(default='active', max_length=20, index=True)
 
 
 class Asset(AssetBase, table=True):

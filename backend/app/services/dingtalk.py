@@ -74,14 +74,23 @@ def send_renewal_reminder(
     contract_end: date,
     days_remaining: int,
     contact_name: Optional[str],
+    renewal_deadline: Optional[date] = None,
+    deadline_type: Optional[str] = None,
     renewal_cycle: str = 'annual',
     renewal_cost: Optional[float] = None,
     annual_cost: Optional[float] = None,
 ) -> bool:
     """发送宽带续费提醒"""
-    urgency = '⚠️ 紧急' if days_remaining <= 7 else '📋 提醒'
+    urgency = '🔴 紧急' if days_remaining <= 7 else '🔔 提醒'
     cycle_label = RENEWAL_CYCLE_LABELS.get(renewal_cycle, '每年')
-    title = f'宽带续费提醒'
+    is_cycle = deadline_type == 'cycle'
+    if is_cycle:
+        deadline_label = '周期续费截止'
+        title = '宽带续费提醒'
+    else:
+        deadline_label = '合同到期'
+        title = '宽带续费提醒'
+    deadline_to_show = renewal_deadline or contract_end
 
     lines = [
         f'### {urgency} 宽带续费提醒',
@@ -90,6 +99,10 @@ def send_renewal_reminder(
     ]
     if circuit_id:
         lines.append(f'- **线路编号**: {circuit_id}')
+    if is_cycle:
+        lines.append(f'- **提醒类型**: 周期性续费')
+    else:
+        lines.append(f'- **提醒类型**: 合同到期续费')
     lines.extend([
         f'- **带宽**: {bandwidth_mbps} Mbps',
         f'- **续费周期**: {cycle_label}',
@@ -101,9 +114,11 @@ def send_renewal_reminder(
     if location:
         lines.append(f'- **位置**: {location}')
     lines.extend([
-        f'- **到期日期**: {contract_end.strftime("%Y-%m-%d")}',
+        f'- **{deadline_label}**: {deadline_to_show.strftime(chr(37) + chr(89) + chr(45) + chr(37) + chr(109) + chr(45) + chr(37) + chr(100))}',
         f'- **剩余天数**: **{days_remaining} 天**',
     ])
+    if is_cycle:
+        lines.append(f'- **合同最终到期**: {contract_end.strftime(chr(37) + chr(89) + chr(45) + chr(37) + chr(109) + chr(45) + chr(37) + chr(100))}')
     if contact_name:
         lines.append(f'- **联系人**: {contact_name}')
 
@@ -111,6 +126,38 @@ def send_renewal_reminder(
         '',
         '> 请及时联系运营商办理续费手续',
     ])
+
+    text = chr(92).join(lines)
+    return send_dingtalk_message(title, text)
+
+
+
+def send_inspection_report(plan_name: str, exception_count: int, summary_lines: list[str]) -> bool:
+    """发送巡检报告到钉钉"""
+    if exception_count > 0:
+        urgency = '⚠️ 异常' if exception_count > 5 else '📋 提醒'
+        title = f'巡检报告 — {plan_name}'
+    else:
+        urgency = '✅ 正常'
+        title = f'巡检报告 — {plan_name}'
+
+    lines = [
+        f'### {urgency} 巡检报告',
+        '',
+        f'- **方案**: {plan_name}',
+        f'- **异常数**: {exception_count}',
+        '',
+    ]
+    if summary_lines:
+        lines.append('**异常摘要:**')
+        lines.append('')
+        for sl in summary_lines[:10]:
+            lines.append(f'- {sl}')
+    if exception_count == 0:
+        lines.append('> 所有检查项正常')
+    else:
+        lines.append('')
+        lines.append('> 请登录平台查看详细巡检报告')
 
     text = '\n'.join(lines)
     return send_dingtalk_message(title, text)

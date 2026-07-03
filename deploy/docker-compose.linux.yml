@@ -54,7 +54,7 @@ services:
       REDIS_URL: redis://127.0.0.1:6379/0
       CELERY_BROKER_URL: redis://127.0.0.1:6379/0
       CELERY_RESULT_BACKEND: redis://127.0.0.1:6379/1
-    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=4 -Q default,scan,iperf,topology
+    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=4 -Q default,scan,iperf,topology,inspection,config_backup,commands,ipam
     volumes:
       - ../backend:/app
       - db_data:/app/data

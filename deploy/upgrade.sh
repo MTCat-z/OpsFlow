@@ -131,7 +131,7 @@ backup_database() {
             ts=$(date +%Y%m%d_%H%M%S)
             local backup_path="$PROJECT_DIR/backend/data/backup_${ts}.db"
             mkdir -p "$PROJECT_DIR/backend/data"
-            docker run --rm -v "$vol_name":/app/data -v "$PROJECT_DIR/backend/data":/backup alpine cp /app/data/ops_platform.db "/backup/backup_${ts}.db"
+            docker run --rm -v "$vol_name":/app/data -v "$PROJECT_DIR/backend/data":/backup alpine sh -c "test -f /app/data/ops_platform.db && cp /app/data/ops_platform.db /backup/backup_${ts}.db || true"
             success "数据库已备份 (from volume): backup_${ts}.db"
         else
             warn "未找到数据库文件，跳过备份"

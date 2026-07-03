@@ -50,6 +50,7 @@ bash deploy/deploy.sh
 ```
 deploy/
 ├── deploy.sh                    # 一键部署脚本（主入口）
+├── upgrade.sh                   # 一键升级脚本（已有服务快速更新）
 ├── docker-compose.linux.yml     # Linux 覆盖配置（host 网络模式）
 ├── Dockerfile.nginx             # Nginx 多阶段构建（自动编译前端）
 ├── nginx.linux.conf             # Linux 专用 Nginx 配置
@@ -171,7 +172,42 @@ sudo firewall-cmd --reload
 # 注意：6379 (Redis) 和 8000 (后端) 不建议对外暴露
 ```
 
+
+## 一键升级
+
+对已部署的服务器，每次迭代后只需：
+
+`ash
+cd /opt/ops-platform
+bash deploy/upgrade.sh
+`
+
+脚本会自动完成：
+
+1. **备份数据库** — 升级前自动创建 ackend/data/backup_*.db
+2. **暂存本地修改** — 如果有未提交的代码改动，先 git stash
+3. **拉取最新代码** — git pull --ff-only
+4. **智能分析变更** — 判断是纯代码、依赖、还是前端变更
+5. **最小化操作** — 纯后端代码只重启（卷挂载即时生效），依赖变更才重建
+6. **健康检查** — 确认后端 API 和 Nginx 正常返回
+
+升级前想预览操作可以加 --dry-run：
+
+`ash
+bash deploy/upgrade.sh --dry-run
+`
+
+| 变更类型 | 操作 | 耗时 |
+|---------|------|------|
+| 仅后端 .py 文件 | 重启容器 | ~10s |
+| 
+equirements.txt / Dockerfile | 重建后端镜像 | ~2min |
+| 前端文件 / 
+ginx.conf | 重建 Nginx 镜像 | ~2min |
+| docker-compose.yml 变更 | 全量重建 | ~3min |
+
 ## 常见问题
+
 
 **Q: 部署时提示端口被占用？**
 检查宿主机 80、6379、8000 端口：`ss -tlnp | grep -E '(80|6379|8000)'`。可以停止冲突服务，或修改 docker-compose 中的端口映射。

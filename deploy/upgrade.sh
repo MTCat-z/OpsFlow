@@ -98,8 +98,8 @@ check_prerequisites() {
         ok=false
     fi
 
-    if ! docker compose -f "$COMPOSE_FILE" ps --services 2>/dev/null | grep -q .; then
-        warn "当前没有运行中的服务，将执行全新部署而非升级"
+    if ! docker compose -f "$COMPOSE_FILE" ps -a --format '{{.Status}}' 2>/dev/null | grep -qv '^$'; then
+        warn "当前没有部署的服务容器，将执行全新部署而非升级"
     fi
 
     if [[ "$ok" == "false" ]]; then
@@ -131,7 +131,7 @@ backup_database() {
             ts=$(date +%Y%m%d_%H%M%S)
             local backup_path="$PROJECT_DIR/backend/data/backup_${ts}.db"
             mkdir -p "$PROJECT_DIR/backend/data"
-            docker run --rm -v "$vol_name":/data -v "$PROJECT_DIR/backend/data":/backup alpine cp /data/ops_platform.db "/backup/backup_${ts}.db"
+            docker run --rm -v "$vol_name":/app/data -v "$PROJECT_DIR/backend/data":/backup alpine cp /app/data/ops_platform.db "/backup/backup_${ts}.db"
             success "数据库已备份 (from volume): backup_${ts}.db"
         else
             warn "未找到数据库文件，跳过备份"

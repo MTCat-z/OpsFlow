@@ -69,3 +69,6 @@ backend/data/
 # Python tools
 .mypy_cache/
 .ruff_cache/
+
+# Local deployment helpers with secrets
+deploy/fix_server.py

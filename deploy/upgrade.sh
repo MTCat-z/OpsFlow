@@ -161,9 +161,12 @@ pull_latest_code() {
     local old_head
     old_head=$(git rev-parse HEAD)
 
+    # 先 fetch 确保拿到远端最新引用
+    git fetch origin 2>/dev/null || true
+
     if [[ "$DRY_RUN" == "true" ]]; then
         local behind_count
-        behind_count=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
+        behind_count=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
         if [[ "$behind_count" -gt 0 ]]; then
             info "[DRY-RUN] 远端有 $behind_count 个新提交待拉取"
         else
@@ -172,16 +175,18 @@ pull_latest_code() {
         return 0
     fi
 
-    git fetch --tags 2>/dev/null || true
-
-    if git pull --ff-only; then
+    if git pull --ff-only origin main; then
         local new_head
         new_head=$(git rev-parse HEAD)
         if [[ "$old_head" == "$new_head" ]]; then
             success "已是最新，无需升级"
             NO_UPDATE=true
+            OLD_HEAD="$old_head"
+            NEW_HEAD="$new_head"
         else
             success "代码已更新"
+            OLD_HEAD="$old_head"
+            NEW_HEAD="$new_head"
             local log_lines
             log_lines=$(git log --oneline "$old_head..$new_head" 2>/dev/null || echo "")
             if [[ -n "$log_lines" ]]; then
@@ -221,7 +226,12 @@ analyze_changes() {
     NEED_FULL_REBUILD=false
 
     local changed_files
-    changed_files=$(git diff --name-only HEAD@{1} HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+    # 使用 pull 前后的 HEAD 精确获取所有变更文件（支持多 commit 合并 pull）
+    if [[ -n "${OLD_HEAD:-}" && -n "${NEW_HEAD:-}" && "$OLD_HEAD" != "$NEW_HEAD" ]]; then
+        changed_files=$(git diff --name-only "$OLD_HEAD" "$NEW_HEAD" 2>/dev/null || echo "")
+    else
+        changed_files=$(git diff --name-only HEAD@{1} HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+    fi
 
     if [[ -z "$changed_files" ]]; then
         info "无法获取变更文件列表，将执行全量重建"

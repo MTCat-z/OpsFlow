@@ -13,6 +13,7 @@ from app.models.ipam import IpamAddress, IpamSubnet
 from app.models.iperf_task import IperfTask
 from app.models.scan_task import ScanTask
 from app.models.topology import TopologyDiscoveryTask, TopologyNode
+from app.services.broadband_renewal import get_next_renewal
 
 router = APIRouter()
 
@@ -62,6 +63,22 @@ def overview(session: Session = Depends(get_session)):
     ).all()
     expiring_30 = [c for c in expiring if (c.contract_end - today).days <= 30]
 
+    # 按续费周期对齐的即将到期宽带
+    renewal_infos = []
+    for c in expiring:
+        r = get_next_renewal(c, today)
+        renewal_infos.append({
+            "provider": c.provider,
+            "circuit_id": c.circuit_id,
+            "next_renewal_deadline": r["next_deadline"].isoformat(),
+            "next_renewal_days": r["days_remaining"],
+        })
+    expiring_renewal_30 = sum(1 for r in renewal_infos if 0 <= r["next_renewal_days"] <= 30)
+    expiring_renewal_list = sorted(
+        [r for r in renewal_infos if 0 <= r["next_renewal_days"] <= 30],
+        key=lambda x: x["next_renewal_days"],
+    )[:5]
+
     # 最近巡检报告
     recent_runs = session.exec(
         select(InspectionRun).order_by(InspectionRun.created_at.desc()).limit(5)
@@ -87,6 +104,7 @@ def overview(session: Session = Depends(get_session)):
         "broadband": {
             "contracts": bb_total,
             "expiring_30d": len(expiring_30),
+            "expiring_renewal_30d": expiring_renewal_30,
             "annual_cost": round(float(bb_annual or 0), 2),
             "expiring_list": [
                 {
@@ -98,6 +116,7 @@ def overview(session: Session = Depends(get_session)):
                 }
                 for c in sorted(expiring_30, key=lambda x: x.contract_end)[:5]
             ],
+            "expiring_renewal_list": expiring_renewal_list,
         },
         "inspection": {
             "plans": plan_count,

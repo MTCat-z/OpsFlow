@@ -41,6 +41,15 @@
         </el-table-column>
         <el-table-column prop="location" label="位置" min-width="130" show-overflow-tooltip />
         <el-table-column prop="contract_end" label="到期日期" width="110" />
+        <el-table-column label="下次续费日" width="150" align="center">
+          <template #default="{ row }">
+            <template v-if="row.status === 'active'">
+              <span>{{ row.next_renewal_deadline }}</span>
+              <el-tag size="small" :type="row.deadline_type === 'cycle' ? 'warning' : 'info'" style="margin-left: 4px">{{ row.deadline_type === 'cycle' ? '周期' : '合同' }}</el-tag>
+            </template>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="剩余" width="80" align="center">
           <template #default="{ row }">
             <span v-if="row.status === 'active'" :style="{ color: daysColor(row) }">{{ daysRemaining(row) }}天</span>
@@ -102,24 +111,24 @@ const statusMap = {
   cancelled: { label: '已取消', type: 'info' },
 }
 
-const dashboard = reactive({ total: 0, active: 0, expired: 0, expiring_30d: 0, expiring_7d: 0, total_annual_cost: 0 })
+const dashboard = reactive({ total: 0, active: 0, expired: 0, expiring_30d: 0, expiring_7d: 0, expiring_renewal_30d: 0, expiring_renewal_7d: 0, total_annual_cost: 0 })
 const query = reactive({ keyword: '', status: '', page: 1, size: 20 })
 
 const statItems = computed(() => [
   { title: '合同总数', value: dashboard.total },
-  { title: '30天内到期', value: dashboard.expiring_30d },
+  { title: '30天内到期', value: dashboard.expiring_renewal_30d },
   { title: '已过期', value: dashboard.expired },
   { title: '年度总费用', value: dashboard.total_annual_cost, suffix: '元' },
 ])
 
 function cycleLabel(cycle) { return CYCLE_LABELS[cycle] || '每年' }
 function cycleTagType(cycle) { return CYCLE_TAG_TYPES[cycle] || '' }
-function daysRemaining(row) { return Math.ceil((new Date(row.contract_end) - new Date()) / 86400000) }
+function daysRemaining(row) { return row.next_renewal_days }
 function daysColor(row) {
   const d = daysRemaining(row)
-  if (d <= 7) return '#f56c6c'
-  if (d <= 30) return '#e6a23c'
-  return '#67c23a'
+  if (d <= 7) return 'var(--ops-danger)'
+  if (d <= 30) return 'var(--ops-warning)'
+  return 'var(--ops-success)'
 }
 
 async function loadData() {

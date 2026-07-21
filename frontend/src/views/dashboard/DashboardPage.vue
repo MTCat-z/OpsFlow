@@ -51,10 +51,10 @@
           <el-table v-if="expiringList.length" :data="expiringList" size="small" stripe>
             <el-table-column prop="provider" label="运营商" width="80" />
             <el-table-column prop="circuit_id" label="线路" min-width="100" show-overflow-tooltip />
-            <el-table-column prop="contract_end" label="到期日" width="100" />
+            <el-table-column prop="next_renewal_deadline" label="续费日" width="100" />
             <el-table-column label="剩余" width="70" align="center">
               <template #default="{ row }">
-                <span :style="{ color: row.days_remaining <= 7 ? '#f56c6c' : row.days_remaining <= 15 ? '#e6a23c' : '#67c23a' }">{{ row.days_remaining }}天</span>
+                <span :style="{ color: row.next_renewal_days <= 7 ? 'var(--ops-danger)' : row.next_renewal_days <= 15 ? 'var(--ops-warning)' : 'var(--ops-success)' }">{{ row.next_renewal_days }}天</span>
               </template>
             </el-table-column>
           </el-table>
@@ -93,13 +93,13 @@ let pollTimer = null
 const cards = computed(() => [
   { label: '资产总数', value: data.value.assets?.total || 0, note: '纳管设备' },
   { label: '扫描任务', value: data.value.network_tasks?.scans || 0, note: `${data.value.network_tasks?.scan_running || 0} 个运行中` },
-  { label: '宽带合同', value: data.value.broadband?.contracts || 0, note: `${data.value.broadband?.expiring_30d || 0} 个 30 天内到期` },
+  { label: '宽带合同', value: data.value.broadband?.contracts || 0, note: `${data.value.broadband?.expiring_renewal_30d || 0} 个 30 天内到期` },
   { label: '巡检方案', value: data.value.inspection?.plans || 0, note: `${data.value.inspection?.enabled_plans || 0} 个启用` },
   { label: 'IPAM 子网', value: data.value.ipam?.subnets || 0, note: `${data.value.ipam?.addresses || 0} 个地址记录` },
   { label: '批量命令', value: data.value.automation?.command_batches || 0, note: '执行批次' },
 ])
 
-const expiringList = computed(() => data.value.broadband?.expiring_list || [])
+const expiringList = computed(() => data.value.broadband?.expiring_renewal_list || [])
 const recentRuns = computed(() => data.value.inspection?.recent_runs || [])
 
 async function loadData() {
@@ -170,19 +170,19 @@ onUnmounted(() => {
 }
 
 .summary-card__label {
-  color: #606266;
+  color: var(--ops-text-secondary);
   font-size: 13px;
 }
 
 .summary-card__value {
-  color: #1f2d3d;
+  color: var(--ops-text-primary);
   font-size: 28px;
   font-weight: 700;
   line-height: 42px;
 }
 
 .summary-card__note {
-  color: #909399;
+  color: var(--ops-text-muted);
   font-size: 12px;
 }
 </style>

@@ -10,6 +10,7 @@ from app.models.broadband import (
     RENEWAL_CYCLE_MONTHS, RENEWAL_CYCLE_LABELS, calc_annual_cost,
 )
 from app.services.dingtalk import send_renewal_reminder, send_test_message
+from app.services.broadband_renewal import get_next_renewal
 import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill
@@ -25,6 +26,15 @@ def broadband_dashboard(session: Session = Depends(get_session)):
     expired = [c for c in all_contracts if c.status == 'expired']
     expiring_30 = [c for c in active if (c.contract_end - today).days <= 30 and (c.contract_end - today).days >= 0]
     expiring_7 = [c for c in active if (c.contract_end - today).days <= 7 and (c.contract_end - today).days >= 0]
+    # 按续费周期对齐的即将到期统计
+    expiring_renewal_30 = 0
+    expiring_renewal_7 = 0
+    for c in active:
+        dr = get_next_renewal(c, today)['days_remaining']
+        if 0 <= dr <= 30:
+            expiring_renewal_30 += 1
+        if 0 <= dr <= 7:
+            expiring_renewal_7 += 1
     total_annual = sum(c.annual_cost or 0 for c in active)
     return {
         'total': len(all_contracts),
@@ -32,6 +42,8 @@ def broadband_dashboard(session: Session = Depends(get_session)):
         'expired': len(expired),
         'expiring_30d': len(expiring_30),
         'expiring_7d': len(expiring_7),
+        'expiring_renewal_30d': expiring_renewal_30,
+        'expiring_renewal_7d': expiring_renewal_7,
         'total_annual_cost': round(total_annual, 2),
     }
 
@@ -56,7 +68,16 @@ def list_contracts(
         q = q.where(BroadbandContract.status == status)
     total = len(session.exec(q).all())
     items = session.exec(q.offset((page - 1) * size).limit(size)).all()
-    return {'total': total, 'page': page, 'size': size, 'items': items}
+    today = date.today()
+    result_items = []
+    for c in items:
+        item = c.model_dump(mode='json')
+        renewal = get_next_renewal(c, today)
+        item['next_renewal_deadline'] = renewal['next_deadline'].isoformat()
+        item['next_renewal_days'] = renewal['days_remaining']
+        item['deadline_type'] = renewal['deadline_type']
+        result_items.append(item)
+    return {'total': total, 'page': page, 'size': size, 'items': result_items}
 
 
 @router.post('', response_model=BroadbandContractRead, status_code=201)
@@ -71,12 +92,18 @@ def create_contract(data: BroadbandContractCreate, session: Session = Depends(ge
     return contract
 
 
-@router.get('/{contract_id}', response_model=BroadbandContractRead)
+@router.get('/{contract_id}', response_model=dict)
 def get_contract(contract_id: int, session: Session = Depends(get_session)):
     contract = session.get(BroadbandContract, contract_id)
     if not contract:
         raise HTTPException(404, '合同不存在')
-    return contract
+    today = date.today()
+    item = contract.model_dump(mode='json')
+    renewal = get_next_renewal(contract, today)
+    item['next_renewal_deadline'] = renewal['next_deadline'].isoformat()
+    item['next_renewal_days'] = renewal['days_remaining']
+    item['deadline_type'] = renewal['deadline_type']
+    return item
 
 
 @router.put('/{contract_id}', response_model=BroadbandContractRead)
@@ -117,16 +144,17 @@ def test_notify(contract_id: int, session: Session = Depends(get_session)):
     contract = session.get(BroadbandContract, contract_id)
     if not contract:
         raise HTTPException(404, '合同不存在')
-    today = date.today()
-    days_remaining = (contract.contract_end - today).days
+    renewal = get_next_renewal(contract)
     ok = send_renewal_reminder(
         provider=contract.provider,
         circuit_id=contract.circuit_id,
         bandwidth_mbps=contract.bandwidth_mbps,
         location=contract.location,
         contract_end=contract.contract_end,
-        days_remaining=days_remaining,
+        renewal_deadline=renewal['next_deadline'],
+        days_remaining=renewal['days_remaining'],
         contact_name=contract.contact_name,
+        deadline_type=renewal['deadline_type'],
         renewal_cycle=contract.renewal_cycle,
         renewal_cost=contract.renewal_cost,
         annual_cost=contract.annual_cost,

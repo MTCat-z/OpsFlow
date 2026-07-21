@@ -68,9 +68,9 @@
         </el-descriptions-item>
         <el-descriptions-item label="SSH 私钥">
           <el-tag v-if="cred.ssh_private_key" type="success" size="small">已配置</el-tag>
-          <span v-else style="color:#999">未配置</span>
+          <span v-else style="color:var(--ops-text-muted)">未配置</span>
           <el-button v-if="cred.ssh_private_key" size="small" style="margin-left:8px" @click="showKey=!showKey">{{ showKey ? '隐藏' : '查看' }}</el-button>
-          <pre v-if="showKey && cred.ssh_private_key" style="margin-top:8px;font-size:11px;max-height:200px;overflow:auto;background:#f5f5f5;padding:8px;border-radius:4px">{{ cred.ssh_private_key }}</pre>
+          <pre v-if="showKey && cred.ssh_private_key" style="margin-top:8px;font-size:11px;max-height:200px;overflow:auto;background:var(--ops-bg-elevated);padding:8px;border-radius:4px">{{ cred.ssh_private_key }}</pre>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>

@@ -1,8 +1,13 @@
+/* ════════════════════════════════════════════════
+   OpsFlow Design Tokens
+   亮色为默认，[data-theme='dark'] 覆盖暗色套
+   ════════════════════════════════════════════════ */
 :root {
   /* ═══ 品牌色 ═══ */
-  --ops-brand: #001529;
-  --ops-brand-light: #003a70;
-  --ops-brand-lighter: #0050b3;
+  --ops-brand: #0f172a; /* 侧栏深色（深蓝黑） */
+  --ops-primary: #2563eb; /* 主色（亮蓝） */
+  --ops-primary-light: #3b82f6; /* 主色亮变体 */
+  --ops-primary-dark: #1d4ed8; /* 主色暗变体 */
 
   /* ═══ 语义色 ═══ */
   --ops-success: #67c23a;
@@ -13,7 +18,7 @@
   /* ═══ 中性色 ═══ */
   --ops-text-primary: #333333;
   --ops-text-secondary: #666666;
-  --ops-text-muted: #767676; /* 4.54:1 on #fff — WCAG AA */
+  --ops-text-muted: #767676; /* 4.54:1 on #fff - WCAG AA */
   --ops-text-disabled: #c0c4cc;
 
   --ops-bg-page: #f5f7fa;
@@ -28,7 +33,7 @@
   --ops-term-header: #2d2d2d;
   --ops-term-border: #3c3c3c;
 
-  /* ═══ 间距 (4px 基数) ═══ */
+  /* ═══ 间距 (4px 基数，紧凑密度) ═══ */
   --ops-space-1: 4px;
   --ops-space-2: 8px;
   --ops-space-3: 12px;
@@ -38,6 +43,7 @@
   --ops-space-8: 32px;
   --ops-space-10: 40px;
   --ops-space-12: 48px;
+  --ops-space-14: 56px;
 
   /* ═══ 圆角 ═══ */
   --ops-radius-sm: 4px;
@@ -70,16 +76,35 @@
   --ops-bp-lg: 1024px;
   --ops-bp-xl: 1280px;
   --ops-bp-2xl: 1536px;
+
+  /* ═══ 字体 ═══ */
+  --ops-font-sans: 'Fira Sans', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --ops-font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
 }
 
-/* ═══ 暗色模式 Token（预留） ═══ */
+/* ═══ 暗色模式 Token ═══ */
 [data-theme='dark'] {
-  --ops-bg-page: #141414;
-  --ops-bg-card: #1f1f1f;
-  --ops-bg-elevated: #262626;
-  --ops-text-primary: #e8e8e8;
-  --ops-text-secondary: #a6a6a6;
-  --ops-text-muted: #737373;
-  --ops-border: #303030;
-  --ops-border-dark: #434343;
+  --ops-brand: #0f172a; /* 暗色下保持深蓝黑 */
+  --ops-primary: #2563eb;
+  --ops-primary-light: #3b82f6;
+  --ops-primary-dark: #1d4ed8;
+
+  --ops-bg-page: #0f172a;
+  --ops-bg-card: #1e293b;
+  --ops-bg-elevated: #334155;
+  --ops-text-primary: #f1f5f9; /* WCAG AA on #1e293b */
+  --ops-text-secondary: #cbd5e1;
+  --ops-text-muted: #94a3b8;
+  --ops-text-disabled: #475569;
+
+  --ops-border: #334155;
+  --ops-border-dark: #475569;
+
+  --ops-sidebar-bg: #0f172a;
+
+  /* 暗色终端：与页面背景协调 */
+  --ops-term-bg: #0f172a;
+  --ops-term-fg: #e2e8f0;
+  --ops-term-header: #1e293b;
+  --ops-term-border: #334155;
 }

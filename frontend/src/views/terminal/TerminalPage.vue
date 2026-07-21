@@ -119,18 +119,18 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #1e1e1e;
+  background: var(--ops-term-bg);
 }
 .terminal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #3c3c3c;
+  background: var(--ops-term-header);
+  border-bottom: 1px solid var(--ops-term-border);
 }
 .terminal-title {
-  color: #d4d4d4;
+  color: var(--ops-term-fg);
   font-size: 14px;
   font-weight: 500;
 }

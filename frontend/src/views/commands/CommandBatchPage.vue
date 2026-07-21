@@ -88,7 +88,7 @@
       </el-alert>
       <div v-else>
         <p>确认执行批次 <strong>{{ executeBatchName }}</strong>？</p>
-        <p style="color: #909399; font-size: 13px">将对选中的资产执行命令，请确认命令内容无误。</p>
+        <p style="color: var(--ops-text-muted); font-size: 13px">将对选中的资产执行命令，请确认命令内容无误。</p>
       </div>
       <template #footer>
         <el-button @click="confirmDialogVisible = false">取消</el-button>
@@ -254,14 +254,14 @@ onMounted(loadData)
 .result-item {
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid var(--ops-border);
 }
 .result-item:last-child {
   border-bottom: none;
 }
 .output-block {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--ops-term-bg);
+  color: var(--ops-term-fg);
   padding: 12px;
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;

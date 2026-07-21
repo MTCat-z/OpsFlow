@@ -68,9 +68,9 @@
 
     <!-- 重置密码对话框 -->
     <el-dialog v-model="resetPwdVisible" title="重置密码" width="400px">
-      <p style="margin-bottom:12px;color:#666">为用户 <b>{{ resetPwdUser?.username }}</b> 设置新密码：</p>
+      <p style="margin-bottom:12px;color:var(--ops-text-secondary)">为用户 <b>{{ resetPwdUser?.username }}</b> 设置新密码：</p>
       <el-input v-model="newPassword" type="password" placeholder="新密码（至少 6 位）" show-password />
-      <p style="margin-top:8px;font-size:12px;color:#999">重置后用户下次登录将被强制修改密码</p>
+      <p style="margin-top:8px;font-size:12px;color:var(--ops-text-muted)">重置后用户下次登录将被强制修改密码</p>
       <template #footer>
         <el-button @click="resetPwdVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleResetPwd">确定</el-button>

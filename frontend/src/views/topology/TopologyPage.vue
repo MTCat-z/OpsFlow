@@ -234,7 +234,7 @@ onUnmounted(() => {
 .graph-container {
   width: 100%;
   height: 540px;
-  background: #fafafa;
+  background: var(--ops-bg-elevated);
   border-radius: 4px;
   position: relative;
   overflow: hidden;

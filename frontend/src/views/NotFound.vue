@@ -25,7 +25,7 @@ function goHome() {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: var(--ops-bg-page);
 }
 .not-found-content {
   text-align: center;
@@ -33,18 +33,18 @@ function goHome() {
 .error-code {
   font-size: 120px;
   font-weight: 700;
-  color: #001529;
+  color: var(--ops-brand);
   margin: 0;
   line-height: 1;
 }
 .error-message {
   font-size: 24px;
-  color: #333;
+  color: var(--ops-text-primary);
   margin: 16px 0 8px;
 }
 .error-hint {
   font-size: 14px;
-  color: #999;
+  color: var(--ops-text-muted);
   margin-bottom: 32px;
 }
 </style>

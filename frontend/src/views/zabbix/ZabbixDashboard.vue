@@ -6,8 +6,8 @@
     <!-- 统计卡片 -->
     <el-row :gutter="16" style="margin-bottom:16px">
       <el-col :span="6"><el-card shadow="never"><el-statistic title="监控主机" :value="dashboard.total_hosts" /></el-card></el-col>
-      <el-col :span="6"><el-card shadow="never"><el-statistic title="问题主机" :value="dashboard.problem_host_count" :value-style="{ color: dashboard.problem_host_count > 0 ? '#f56c6c' : '#67c23a' }" /></el-card></el-col>
-      <el-col :span="6"><el-card shadow="never"><el-statistic title="严重告警" :value="dashboard.problems_by_severity?.critical || 0" :value-style="{ color: (dashboard.problems_by_severity?.critical || 0) > 0 ? '#f56c6c' : '#67c23a' }" /></el-card></el-col>
+      <el-col :span="6"><el-card shadow="never"><el-statistic title="问题主机" :value="dashboard.problem_host_count" :value-style="{ color: dashboard.problem_host_count > 0 ? 'var(--ops-danger)' : 'var(--ops-success)' }" /></el-card></el-col>
+      <el-col :span="6"><el-card shadow="never"><el-statistic title="严重告警" :value="dashboard.problems_by_severity?.critical || 0" :value-style="{ color: (dashboard.problems_by_severity?.critical || 0) > 0 ? 'var(--ops-danger)' : 'var(--ops-success)' }" /></el-card></el-col>
       <el-col :span="6"><el-card shadow="never"><el-statistic title="总问题数" :value="dashboard.total_problems" /></el-card></el-col>
     </el-row>
     <!-- 问题列表 -->

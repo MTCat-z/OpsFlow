@@ -3,11 +3,11 @@
     <!-- 发现任务状态 -->
     <el-card shadow="never" style="margin-bottom: 12px">
       <template #header><span style="font-weight: 600">发现任务</span></template>
-      <div v-if="!tasks.length" style="color: #999; font-size: 13px">暂无任务</div>
+      <div v-if="!tasks.length" style="color: var(--ops-text-muted); font-size: 13px">暂无任务</div>
       <div
         v-for="t in tasks"
         :key="t.id"
-        style="margin-bottom: 8px; padding: 8px; background: #fafafa; border-radius: 4px"
+        style="margin-bottom: 8px; padding: 8px; background: var(--ops-bg-elevated); border-radius: 4px"
       >
         <div style="display: flex; justify-content: space-between; align-items: center">
           <span style="font-size: 13px">{{ t.target_subnet }}</span>
@@ -28,7 +28,7 @@
           style="margin: 4px 0"
         />
         <div style="display: flex; justify-content: space-between; align-items: center">
-          <span style="font-size: 12px; color: #999">节点: {{ t.nodes_discovered }} | 连线: {{ t.edges_inferred }}</span>
+          <span style="font-size: 12px; color: var(--ops-text-muted)">节点: {{ t.nodes_discovered }} | 连线: {{ t.edges_inferred }}</span>
           <el-tag v-if="t.status === 'failed'" size="small" type="danger" style="font-size: 11px" :title="t.error_message">失败</el-tag>
           <el-tag v-else-if="t.status === 'running'" size="small" type="warning" style="font-size: 11px">运行中</el-tag>
           <el-tag v-else-if="t.status === 'completed'" size="small" type="success" style="font-size: 11px">完成</el-tag>
@@ -36,7 +36,7 @@
         </div>
         <div
           v-if="t.status === 'failed' && t.error_message"
-          style="font-size: 11px; color: #f56c6c; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+          style="font-size: 11px; color: var(--ops-danger); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
           :title="t.error_message"
         >
           {{ t.error_message }}

@@ -216,8 +216,8 @@ onMounted(loadData)
 
 <style scoped>
 .diff-view, .config-view {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--ops-term-bg);
+  color: var(--ops-term-fg);
   padding: 16px;
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;

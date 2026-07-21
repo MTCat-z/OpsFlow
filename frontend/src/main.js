@@ -2,8 +2,12 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { User, Lock } from '@element-plus/icons-vue'
 import './styles/global.css'
+import { initTheme } from '@/composables/useTheme'
 import App from './App.vue'
 import router from './router'
+
+// 尽早应用主题，防止首屏闪烁（FOUC）
+initTheme()
 
 const app = createApp(App)
 

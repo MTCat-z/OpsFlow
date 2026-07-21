@@ -101,7 +101,7 @@
               <el-table-column prop="hop" label="#" width="50" align="center" />
               <el-table-column prop="host" label="主机" min-width="140" />
               <el-table-column label="丢包%" width="80" align="center">
-                <template #default="{ row }"><span :style="{ color: row.loss_percent > 0 ? '#e6a23c' : '#67c23a' }">{{ row.loss_percent }}%</span></template>
+                <template #default="{ row }"><span :style="{ color: row.loss_percent > 0 ? 'var(--ops-warning)' : 'var(--ops-success)' }">{{ row.loss_percent }}%</span></template>
               </el-table-column>
               <el-table-column prop="sent" label="发送" width="60" align="center" />
               <el-table-column prop="avg" label="Avg(ms)" width="90" align="center" />
@@ -170,8 +170,8 @@ async function doMtr() {
 </script>
 <style scoped>
 .output-block {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--ops-term-bg);
+  color: var(--ops-term-fg);
   padding: 16px;
   border-radius: 6px;
   font-family: 'Consolas', 'Monaco', monospace;

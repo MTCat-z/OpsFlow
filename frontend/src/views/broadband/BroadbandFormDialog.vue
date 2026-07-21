@@ -23,7 +23,7 @@
         <el-col :span="12">
           <el-form-item label="年费(元，自动)">
             <el-input-number v-model="form.annual_cost" :min="0" :precision="2" style="width: 100%" />
-            <div style="font-size: 12px; color: #999; margin-top: 4px">根据周期费用自动计算，可手动修改</div>
+            <div style="font-size: 12px; color: var(--ops-text-muted); margin-top: 4px">根据周期费用自动计算，可手动修改</div>
           </el-form-item>
         </el-col>
         <el-col :span="12"><el-form-item label="位置"><el-input v-model="form.location" /></el-form-item></el-col>

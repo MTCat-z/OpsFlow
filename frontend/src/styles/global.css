@@ -1,5 +1,129 @@
 @import './tokens.css';
 
+/* ═══ Element Plus 主题桥接（亮色） ═══ */
+:root {
+  --el-color-primary: var(--ops-primary);
+  --el-color-primary-light-3: #6692f1;
+  --el-color-primary-light-5: #92b1f5;
+  --el-color-primary-light-7: #bdd0f9;
+  --el-color-primary-light-8: #d3e0fb;
+  --el-color-primary-light-9: #e9effd;
+  --el-color-primary-dark-2: var(--ops-primary-dark);
+
+  --el-color-success: var(--ops-success);
+  --el-color-success-light-3: #95d475;
+  --el-color-success-light-5: #b3e19d;
+  --el-color-success-light-7: #d1edc3;
+  --el-color-success-light-8: #e1f3d9;
+  --el-color-success-light-9: #f0f9eb;
+
+  --el-color-warning: var(--ops-warning);
+  --el-color-warning-light-3: #eebe77;
+  --el-color-warning-light-5: #f3d19e;
+  --el-color-warning-light-7: #f8e3c5;
+  --el-color-warning-light-8: #faecd8;
+  --el-color-warning-light-9: #fdf6ec;
+
+  --el-color-danger: var(--ops-danger);
+  --el-color-danger-light-3: #f89898;
+  --el-color-danger-light-5: #fab6b6;
+  --el-color-danger-light-7: #fcd3d3;
+  --el-color-danger-light-8: #fde2e2;
+  --el-color-danger-light-9: #fef0f0;
+
+  --el-color-info: var(--ops-info);
+  --el-color-info-light-3: #79bbff;
+  --el-color-info-light-5: #a0cfff;
+  --el-color-info-light-7: #c6e2ff;
+  --el-color-info-light-8: #d9ecff;
+  --el-color-info-light-9: #ecf5ff;
+
+  --el-bg-color: var(--ops-bg-card);
+  --el-bg-color-page: var(--ops-bg-page);
+  --el-bg-color-overlay: var(--ops-bg-card);
+  --el-text-color-primary: var(--ops-text-primary);
+  --el-text-color-regular: var(--ops-text-secondary);
+  --el-text-color-secondary: var(--ops-text-muted);
+  --el-text-color-placeholder: var(--ops-text-muted);
+  --el-text-color-disabled: var(--ops-text-disabled);
+  --el-border-color: var(--ops-border-dark);
+  --el-border-color-light: var(--ops-border);
+  --el-border-color-lighter: var(--ops-border);
+  --el-border-color-extra-light: var(--ops-border);
+  --el-border-color-dark: var(--ops-border-dark);
+  --el-border-color-darker: var(--ops-border-dark);
+  --el-fill-color: var(--ops-bg-elevated);
+  --el-fill-color-light: var(--ops-bg-elevated);
+  --el-fill-color-lighter: var(--ops-bg-card);
+  --el-fill-color-extra-light: var(--ops-bg-elevated);
+  --el-fill-color-blank: var(--ops-bg-card);
+  --el-mask-color: rgba(0, 0, 0, 0.5);
+}
+
+/* ═══ Element Plus 主题桥接（暗色） ═══ */
+[data-theme='dark'] {
+  --el-color-primary: var(--ops-primary);
+  --el-color-primary-light-3: #1a45a5;
+  --el-color-primary-light-5: #133276;
+  --el-color-primary-light-7: #0b1e47;
+  --el-color-primary-light-8: #05142f;
+  --el-color-primary-light-9: #040a17;
+  --el-color-primary-dark-2: #3b82f6;
+
+  --el-color-success: var(--ops-success);
+  --el-color-success-light-3: #2a4d1b;
+  --el-color-success-light-5: #1f3a14;
+  --el-color-success-light-7: #15280d;
+  --el-color-success-light-8: #101f0a;
+  --el-color-success-light-9: #0a1406;
+
+  --el-color-warning: var(--ops-warning);
+  --el-color-warning-light-3: #5c4220;
+  --el-color-warning-light-5: #45321a;
+  --el-color-warning-light-7: #2e2213;
+  --el-color-warning-light-8: #241b10;
+  --el-color-warning-light-9: #181208;
+
+  --el-color-danger: var(--ops-danger);
+  --el-color-danger-light-3: #5c2a2a;
+  --el-color-danger-light-5: #451f1f;
+  --el-color-danger-light-7: #2e1414;
+  --el-color-danger-light-8: #241010;
+  --el-color-danger-light-9: #180a0a;
+
+  --el-color-info: var(--ops-info);
+  --el-color-info-light-3: #1a3a5c;
+  --el-color-info-light-5: #142c45;
+  --el-color-info-light-7: #0d1e2e;
+  --el-color-info-light-8: #0a1824;
+  --el-color-info-light-9: #061018;
+
+  --el-bg-color: #1e293b;
+  --el-bg-color-page: #0f172a;
+  --el-bg-color-overlay: #1e293b;
+  --el-text-color-primary: #f1f5f9;
+  --el-text-color-regular: #cbd5e1;
+  --el-text-color-secondary: #94a3b8;
+  --el-text-color-placeholder: #94a3b8;
+  --el-text-color-disabled: #475569;
+  --el-border-color: #334155;
+  --el-border-color-light: #334155;
+  --el-border-color-lighter: #1e293b;
+  --el-border-color-extra-light: #1e293b;
+  --el-border-color-dark: #475569;
+  --el-border-color-darker: #475569;
+  --el-fill-color: #334155;
+  --el-fill-color-light: #334155;
+  --el-fill-color-lighter: #1e293b;
+  --el-fill-color-extra-light: #1e293b;
+  --el-fill-color-blank: #1e293b;
+  --el-mask-color: rgba(0, 0, 0, 0.7);
+  --el-box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --el-box-shadow-light: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+  --el-box-shadow-lighter: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --el-box-shadow-dark: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
 /* ═══ 全局重置 ═══ */
 *,
 *::before,
@@ -16,7 +140,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  font-family: var(--ops-font-sans);
   color: var(--ops-text-primary);
   background: var(--ops-bg-page);
   line-height: 1.5;
@@ -52,7 +176,7 @@ body {
   color: var(--ops-term-fg);
   padding: var(--ops-space-4);
   border-radius: var(--ops-radius-md);
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: var(--ops-font-mono);
   font-size: 13px;
   line-height: 1.5;
   overflow-x: auto;
@@ -60,6 +184,12 @@ body {
   word-break: break-all;
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* ═══ 数字/数值工具类（等宽，便于对齐） ═══ */
+.ops-num {
+  font-family: var(--ops-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ═══ 空状态 ═══ */
@@ -81,8 +211,8 @@ body {
   left: 16px;
   z-index: 9999;
   padding: 8px 16px;
-  background: var(--ops-brand);
-  color: white;
+  background: var(--ops-primary);
+  color: #fff;
   border-radius: var(--ops-radius-sm);
   text-decoration: none;
   font-size: 14px;
@@ -93,7 +223,7 @@ body {
 
 /* ═══ 焦点样式 ═══ */
 :focus-visible {
-  outline: 2px solid var(--ops-info);
+  outline: 2px solid var(--ops-primary);
   outline-offset: 2px;
 }
 

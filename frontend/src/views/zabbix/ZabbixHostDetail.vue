@@ -129,9 +129,9 @@ onUnmounted(() => { window.removeEventListener('resize', handleResize); cpuInsta
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: var(--ops-text-muted);
   font-size: 14px;
-  background: #fafafa;
+  background: var(--ops-bg-elevated);
   border-radius: 4px;
 }
 </style>

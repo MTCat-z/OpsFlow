@@ -2,6 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-header">
+        <div class="login-brand" aria-hidden="true">OF</div>
         <h2>内网运维平台</h2>
         <p>请登录以继续</p>
       </div>
@@ -59,27 +60,55 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #001529 0%, #003a70 50%, #0050b3 100%);
+  background: linear-gradient(135deg, var(--ops-brand) 0%, var(--ops-primary-dark) 55%, var(--ops-primary) 100%);
+  font-family: var(--ops-font-sans);
 }
 .login-card {
   width: 400px;
   padding: 40px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  background: var(--ops-bg-card);
+  border-radius: var(--ops-radius-lg);
+  border: 1px solid var(--ops-border);
+  box-shadow: var(--ops-shadow-lg);
+  transition: transform var(--ops-transition-normal), box-shadow var(--ops-transition-normal);
+}
+.login-card:hover {
+  transform: translateY(-2px);
 }
 .login-header {
   text-align: center;
   margin-bottom: 32px;
 }
+.login-brand {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--ops-primary) 0%, var(--ops-primary-light) 100%);
+  color: var(--ops-bg-card);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 1px;
+  box-shadow: var(--ops-shadow-md);
+}
 .login-header h2 {
   margin: 0 0 8px;
   font-size: 24px;
-  color: #001529;
+  color: var(--ops-brand);
 }
 .login-header p {
   margin: 0;
-  color: #999;
+  color: var(--ops-text-muted);
   font-size: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-card,
+  .login-card:hover {
+    transition: none;
+    transform: none;
+  }
 }
 </style>

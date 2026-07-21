@@ -7,7 +7,7 @@
   >
     <el-alert type="info" :closable="false" style="margin-bottom:16px">
       <template #title>
-        请先<a href="#" style="color:#409eff" @click.prevent="$emit('downloadTemplate')">下载模板</a>，按格式填写后上传 Excel 文件
+        请先<a href="#" style="color:var(--ops-info)" @click.prevent="$emit('downloadTemplate')">下载模板</a>，按格式填写后上传 Excel 文件
       </template>
     </el-alert>
     <el-upload
@@ -21,12 +21,12 @@
       <template #trigger>
         <el-button type="primary">选择文件</el-button>
       </template>
-      <span style="margin-left:12px;font-size:13px;color:#999">仅支持 .xlsx 格式</span>
+      <span style="margin-left:12px;font-size:13px;color:var(--ops-text-muted)">仅支持 .xlsx 格式</span>
     </el-upload>
     <div v-if="importResult" style="margin-top:16px">
       <el-alert :title="importResult.message" :type="importResult.errors?.length ? 'warning' : 'success'" :closable="false" />
       <div v-if="importResult.errors?.length" style="margin-top:8px;max-height:200px;overflow:auto">
-        <p v-for="(e,i) in importResult.errors" :key="i" style="font-size:13px;color:#e6a23c;margin:2px 0">{{ e }}</p>
+        <p v-for="(e,i) in importResult.errors" :key="i" style="font-size:13px;color:var(--ops-warning);margin:2px 0">{{ e }}</p>
       </div>
     </div>
     <template #footer>

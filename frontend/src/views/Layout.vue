@@ -1,6 +1,6 @@
 <template>
   <el-container class="app-layout">
-    <el-aside :width="collapsed ? '64px' : '232px'" class="app-sidebar">
+    <el-aside :width="collapsed ? 'var(--ops-sidebar-collapsed)' : 'var(--ops-sidebar-width)'" class="app-sidebar">
       <div class="app-sidebar__header">
         <span class="app-sidebar__logo">OPS</span>
         <span v-show="!collapsed" class="app-sidebar__title">OpsFlow</span>
@@ -10,9 +10,6 @@
         :collapse="collapsed"
         :collapse-transition="false"
         router
-        background-color="#001529"
-        text-color="#ffffffa6"
-        active-text-color="#ffffff"
       >
         <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>
@@ -33,6 +30,12 @@
           </el-breadcrumb>
         </div>
         <div class="app-header__right">
+          <el-button
+            text
+            :icon="isDark ? Sunny : Moon"
+            :title="isDark ? '切换到浅色模式' : '切换到暗色模式'"
+            @click="toggleTheme"
+          />
           <el-tag size="small" :type="authStore.isAdmin ? 'danger' : ''">
             {{ authStore.isAdmin ? '管理员' : '用户' }}
           </el-tag>
@@ -96,19 +99,23 @@ import {
   Grid,
   Histogram,
   Monitor,
+  Moon,
   Operation,
   Search,
   Share,
+  Sunny,
   Timer,
   UserFilled,
   Expand,
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const collapsed = ref(false)
+const { isDark, toggleTheme } = useTheme()
 
 const allMenuItems = [
   { path: '/dashboard', title: '运维数据大屏', icon: Histogram, admin: false },
@@ -166,28 +173,30 @@ onMounted(() => {
 }
 
 .app-sidebar {
-  background: #001529;
+  background: var(--ops-sidebar-bg);
   overflow: hidden;
-  transition: width 0.2s ease;
+  transition: width var(--ops-transition-fast);
 }
 
 .app-sidebar__header {
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: var(--ops-sidebar-text-active);
   display: flex;
-  gap: 12px;
-  height: 64px;
+  gap: var(--ops-space-3);
+  height: var(--ops-sidebar-header-h);
   padding: 0 18px;
   white-space: nowrap;
 }
 
 .app-sidebar__logo {
   align-items: center;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: var(--ops-primary);
+  border-radius: var(--ops-radius-sm);
+  color: #fff;
   display: flex;
   flex-shrink: 0;
+  font-family: var(--ops-font-mono);
   font-size: 12px;
   font-weight: 700;
   height: 28px;
@@ -199,30 +208,53 @@ onMounted(() => {
   font-weight: 700;
 }
 
+/* 覆盖 Element Plus Menu 以适配深色侧栏 */
+.app-sidebar :deep(.el-menu) {
+  background-color: var(--ops-sidebar-bg);
+  border-right: none;
+  --el-menu-bg-color: var(--ops-sidebar-bg);
+  --el-menu-text-color: var(--ops-sidebar-text);
+  --el-menu-active-color: var(--ops-sidebar-text-active);
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+}
+
+.app-sidebar :deep(.el-menu-item) {
+  color: var(--ops-sidebar-text);
+}
+
+.app-sidebar :deep(.el-menu-item:hover) {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--ops-sidebar-text-active);
+}
+
+.app-sidebar :deep(.el-menu-item.is-active) {
+  color: var(--ops-sidebar-text-active);
+}
+
 .app-header {
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #ebeef5;
+  background: var(--ops-bg-card);
+  border-bottom: 1px solid var(--ops-border);
   display: flex;
-  height: 56px !important;
+  height: var(--ops-header-h) !important;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 var(--ops-space-5);
 }
 
 .app-header__left,
 .app-header__right {
   align-items: center;
   display: flex;
-  gap: 12px;
+  gap: var(--ops-space-3);
 }
 
 .app-header__username {
-  color: #303133;
+  color: var(--ops-text-primary);
   font-size: 14px;
 }
 
 .app-content {
-  background: #f5f7fa;
-  padding: 20px;
+  background: var(--ops-bg-page);
+  padding: var(--ops-space-5);
 }
 </style>

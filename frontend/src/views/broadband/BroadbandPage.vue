@@ -22,26 +22,26 @@
           <el-button type="success" @click="importDialogRef?.open()">导入 Excel</el-button>
         </el-row>
       </template>
-      <el-table v-loading="loading" :data="tableData" stripe border>
-        <el-table-column prop="provider" label="运营商" width="120" />
-        <el-table-column prop="circuit_id" label="线路编号" width="130" />
-        <el-table-column prop="bandwidth_mbps" label="带宽" width="90" align="center">
+      <el-table v-loading="loading" :data="tableData" stripe border :default-sort="{ prop: 'next_renewal_days', order: 'ascending' }">
+        <el-table-column prop="provider" label="运营商" width="120" sortable />
+        <el-table-column prop="circuit_id" label="线路编号" width="130" sortable />
+        <el-table-column prop="bandwidth_mbps" label="带宽" width="90" align="center" sortable>
           <template #default="{ row }">{{ row.bandwidth_mbps }}M</template>
         </el-table-column>
-        <el-table-column label="续费周期" width="130" align="center">
+        <el-table-column prop="renewal_cycle" label="续费周期" width="130" align="center" sortable :sort-method="(a, b) => cycleOrder(a.renewal_cycle) - cycleOrder(b.renewal_cycle)">
           <template #default="{ row }">
             <el-tag size="small" :type="cycleTagType(row.renewal_cycle)">{{ cycleLabel(row.renewal_cycle) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="renewal_cost" label="周期费用" width="110" align="right">
+        <el-table-column prop="renewal_cost" label="周期费用" width="110" align="right" sortable>
           <template #default="{ row }">{{ row.renewal_cost != null ? row.renewal_cost.toFixed(2) : '-' }}</template>
         </el-table-column>
-        <el-table-column prop="annual_cost" label="年费" width="100" align="right">
+        <el-table-column prop="annual_cost" label="年费" width="100" align="right" sortable>
           <template #default="{ row }">{{ row.annual_cost != null ? row.annual_cost.toFixed(0) : '-' }}</template>
         </el-table-column>
-        <el-table-column prop="location" label="位置" min-width="130" show-overflow-tooltip />
-        <el-table-column prop="contract_end" label="到期日期" width="110" />
-        <el-table-column label="下次续费日" width="150" align="center">
+        <el-table-column prop="location" label="位置" min-width="130" show-overflow-tooltip sortable />
+        <el-table-column prop="contract_end" label="到期日期" width="110" sortable />
+        <el-table-column prop="next_renewal_deadline" label="下次续费日" width="150" align="center" sortable :sort-by="(row) => row.status === 'active' ? row.next_renewal_deadline : '9999-12-31'">
           <template #default="{ row }">
             <template v-if="row.status === 'active'">
               <span>{{ row.next_renewal_deadline }}</span>
@@ -50,7 +50,7 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="剩余" width="80" align="center">
+        <el-table-column prop="next_renewal_days" label="剩余" width="80" align="center" sortable :sort-by="(row) => row.status === 'active' ? row.next_renewal_days : 99999">
           <template #default="{ row }">
             <span v-if="row.status === 'active'" :style="{ color: daysColor(row) }">{{ daysRemaining(row) }}天</span>
             <span v-else>-</span>
@@ -123,6 +123,7 @@ const statItems = computed(() => [
 
 function cycleLabel(cycle) { return CYCLE_LABELS[cycle] || '每年' }
 function cycleTagType(cycle) { return CYCLE_TAG_TYPES[cycle] || '' }
+function cycleOrder(cycle) { return { monthly: 1, quarterly: 3, semi_annual: 6, annual: 12 }[cycle] || 99 }
 function daysRemaining(row) { return row.next_renewal_days }
 function daysColor(row) {
   const d = daysRemaining(row)

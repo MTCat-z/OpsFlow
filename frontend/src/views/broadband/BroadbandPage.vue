@@ -20,6 +20,7 @@
           <el-button type="primary" @click="formDialogRef?.openCreate()">新增宽带</el-button>
           <el-button @click="downloadTemplate">下载模板</el-button>
           <el-button type="success" @click="importDialogRef?.open()">导入 Excel</el-button>
+          <el-button type="warning" @click="exportExcel">导出 Excel</el-button>
         </el-row>
       </template>
       <el-table v-loading="loading" :data="tableData" stripe border :default-sort="{ prop: 'next_renewal_days', order: 'ascending' }">
@@ -188,6 +189,23 @@ async function downloadTemplate() {
     URL.revokeObjectURL(url)
   } catch (_e) {
     ElMessage.error('模板下载失败')
+  }
+}
+
+async function exportExcel() {
+  try {
+    const blob = await broadbandApi.exportExcel({ keyword: query.keyword, status: query.status })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '宽带合同列表.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (_e) {
+    ElMessage.error('导出失败')
   }
 }
 

@@ -67,6 +67,7 @@ export const broadbandApi = {
   testNotify: (id) => request.post('/broadband/' + id + '/test-notify'),
   // 导入导出
   downloadTemplate: () => request.get('/broadband/export/template', { responseType: 'blob' }),
+  exportExcel: (params) => request.get('/broadband/export/excel', { params, responseType: 'blob' }),
   importExcel: (file) => {
     const form = new FormData()
     form.append('file', file)

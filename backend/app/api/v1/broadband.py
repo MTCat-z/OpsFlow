@@ -209,7 +209,72 @@ def download_template():
     )
 
 
-@router.post('/import/excel', summary='从 Excel 批量导入宽带合同')
+@router.get('/export/excel', summary='导出宽带合同为 Excel')
+def export_excel(
+    keyword: Optional[str] = None,
+    status: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    """导出宽带合同数据为可编辑的 Excel，格式与导入模板一致"""
+    q = select(BroadbandContract)
+    if keyword:
+        q = q.where(
+            col(BroadbandContract.provider).contains(keyword)
+            | col(BroadbandContract.circuit_id).contains(keyword)
+            | col(BroadbandContract.location).contains(keyword)
+            | col(BroadbandContract.contact_name).contains(keyword)
+        )
+    if status:
+        q = q.where(BroadbandContract.status == status)
+    contracts = session.exec(q.order_by(BroadbandContract.contract_end)).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = '宽带合同'
+
+    headers = ['运营商*', '带宽(Mbps)*', '合同开始*', '合同到期*',
+               '续费周期', '周期费用(元)', '年费(元)', '线路编号',
+               '位置', '联系人', '联系电话', '月费(元)',
+               '自动续费(是/否)', '状态', '备注', '提醒天数']
+
+    fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
+    font = Font(bold=True)
+    for col_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = font
+        cell.fill = fill
+
+    cycle_reverse = {'monthly': '每月', 'quarterly': '每季度', 'semi_annual': '每半年', 'annual': '每年'}
+    for row_idx, c in enumerate(contracts, 2):
+        ws.cell(row=row_idx, column=1, value=c.provider or '')
+        ws.cell(row=row_idx, column=2, value=c.bandwidth_mbps)
+        ws.cell(row=row_idx, column=3, value=c.contract_start.isoformat() if c.contract_start else '')
+        ws.cell(row=row_idx, column=4, value=c.contract_end.isoformat() if c.contract_end else '')
+        ws.cell(row=row_idx, column=5, value=cycle_reverse.get(c.renewal_cycle, c.renewal_cycle or '每年'))
+        ws.cell(row=row_idx, column=6, value=c.renewal_cost if c.renewal_cost is not None else '')
+        ws.cell(row=row_idx, column=7, value=c.annual_cost if c.annual_cost is not None else '')
+        ws.cell(row=row_idx, column=8, value=c.circuit_id or '')
+        ws.cell(row=row_idx, column=9, value=c.location or '')
+        ws.cell(row=row_idx, column=10, value=c.contact_name or '')
+        ws.cell(row=row_idx, column=11, value=c.contact_phone or '')
+        ws.cell(row=row_idx, column=12, value=c.monthly_cost if c.monthly_cost is not None else '')
+        ws.cell(row=row_idx, column=13, value='是' if c.auto_renew else '否')
+        ws.cell(row=row_idx, column=14, value=c.status or 'active')
+        ws.cell(row=row_idx, column=15, value=c.notes or '')
+        ws.cell(row=row_idx, column=16, value=c.reminder_days or '30,15,7')
+
+    widths = [14, 14, 14, 14, 14, 14, 14, 14, 16, 10, 14, 12, 16, 10, 20, 14]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': 'attachment; filename=broadband_contracts.xlsx'},
+    )
 def import_excel(file: UploadFile = File(...), session: Session = Depends(get_session)):
     """上传 Excel 文件，批量创建宽带合同"""
     if not file.filename.endswith(('.xlsx', '.xls')):

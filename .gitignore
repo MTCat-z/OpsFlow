@@ -72,3 +72,4 @@ backend/data/
 
 # Local deployment helpers with secrets
 deploy/fix_server.py
+.last_built_commit

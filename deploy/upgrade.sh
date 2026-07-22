@@ -178,15 +178,27 @@ pull_latest_code() {
     if git pull --ff-only origin main; then
         local new_head
         new_head=$(git rev-parse HEAD)
+        OLD_HEAD="$old_head"
+        NEW_HEAD="$new_head"
         if [[ "$old_head" == "$new_head" ]]; then
-            success "已是最新，无需升级"
-            NO_UPDATE=true
-            OLD_HEAD="$old_head"
-            NEW_HEAD="$new_head"
+            # pull 没拉到新代码，但可能用户手动 pull 过、代码已更新但未构建
+            local last_built
+            last_built=""
+            if [[ -f "$PROJECT_DIR/.last_built_commit" ]]; then
+                last_built=$(cat "$PROJECT_DIR/.last_built_commit" 2>/dev/null || echo "")
+            fi
+            if [[ -n "$last_built" && "$last_built" == "$new_head" ]]; then
+                success "已是最新，无需升级"
+                NO_UPDATE=true
+            else
+                warn "代码已更新但尚未构建（上次构建: ${last_built:-无}），继续执行升级"
+                # 用 last_built 作为 old_head 来检测变更文件
+                if [[ -n "$last_built" ]]; then
+                    OLD_HEAD="$last_built"
+                fi
+            fi
         else
             success "代码已更新"
-            OLD_HEAD="$old_head"
-            NEW_HEAD="$new_head"
             local log_lines
             log_lines=$(git log --oneline "$old_head..$new_head" 2>/dev/null || echo "")
             if [[ -n "$log_lines" ]]; then
@@ -355,6 +367,9 @@ apply_upgrade() {
     fi
 
     sleep 3
+
+    # 记录本次构建的 commit，用于下次升级时判断是否需要重建
+    git rev-parse HEAD > "$PROJECT_DIR/.last_built_commit"
 }
 
 # ============================================================

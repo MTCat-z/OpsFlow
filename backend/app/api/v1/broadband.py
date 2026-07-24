@@ -165,6 +165,28 @@ def test_notify(contract_id: int, session: Session = Depends(get_session)):
         raise HTTPException(500, '通知发送失败，请检查钉钉 Webhook 配置')
 
 
+@router.post('/{contract_id}/mark-renewed', summary='标记已续费，进入下一周期')
+def mark_renewed(contract_id: int, session: Session = Depends(get_session)):
+    """标记合同已续费，清除通知记录，进入下一个续费周期"""
+    contract = session.get(BroadbandContract, contract_id)
+    if not contract:
+        raise HTTPException(404, '合同不存在')
+    from datetime import date as date_type
+    contract.last_renewed_date = date_type.today()
+    contract.notified_dates = None
+    contract.updated_at = datetime.utcnow()
+    session.add(contract)
+    session.commit()
+    renewal = get_next_renewal(contract)
+    return {
+        'success': True,
+        'message': '已标记续费',
+        'last_renewed_date': contract.last_renewed_date.isoformat(),
+        'next_renewal_deadline': renewal['next_deadline'].isoformat(),
+        'next_renewal_days': renewal['days_remaining'],
+    }
+
+
 # ── Excel 导入导出 ──────────────────────────────
 
 @router.get('/export/template', summary='下载宽带导入模板')

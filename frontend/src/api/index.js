@@ -65,6 +65,7 @@ export const broadbandApi = {
   delete: (id) => request.delete('/broadband/' + id),
   dashboard: () => request.get('/broadband/dashboard'),
   testNotify: (id) => request.post('/broadband/' + id + '/test-notify'),
+  markRenewed: (id) => request.post('/broadband/' + id + '/mark-renewed'),
   // 导入导出
   downloadTemplate: () => request.get('/broadband/export/template', { responseType: 'blob' }),
   exportExcel: (params) => request.get('/broadband/export/excel', { params, responseType: 'blob' }),

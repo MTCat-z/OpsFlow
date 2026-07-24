@@ -44,6 +44,7 @@ class BroadbandContractBase(SQLModel):
     contact_phone: Optional[str] = Field(default=None, max_length=30)
     reminder_days: str = Field(default='30,15,7', max_length=100)
     status: str = Field(default='active', max_length=20, index=True)
+    last_renewed_date: Optional[date] = Field(default=None)  # 上次续费日期
     notes: Optional[str] = Field(default=None, max_length=2000)
 
 
@@ -75,6 +76,7 @@ class BroadbandContractUpdate(SQLModel):
     contact_phone: Optional[str] = None
     reminder_days: Optional[str] = None
     status: Optional[str] = None
+    last_renewed_date: Optional[date] = None
     notes: Optional[str] = None
 
 

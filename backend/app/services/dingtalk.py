@@ -114,11 +114,11 @@ def send_renewal_reminder(
     if location:
         lines.append(f'- **位置**: {location}')
     lines.extend([
-        f'- **{deadline_label}**: {deadline_to_show.strftime(chr(37) + chr(89) + chr(45) + chr(37) + chr(109) + chr(45) + chr(37) + chr(100))}',
+        f'- **{deadline_label}**: {deadline_to_show.strftime("%Y-%m-%d")}',
         f'- **剩余天数**: **{days_remaining} 天**',
     ])
     if is_cycle:
-        lines.append(f'- **合同最终到期**: {contract_end.strftime(chr(37) + chr(89) + chr(45) + chr(37) + chr(109) + chr(45) + chr(37) + chr(100))}')
+        lines.append(f'- **合同最终到期**: {contract_end.strftime("%Y-%m-%d")}')
     if contact_name:
         lines.append(f'- **联系人**: {contact_name}')
 
@@ -127,7 +127,7 @@ def send_renewal_reminder(
         '> 请及时联系运营商办理续费手续',
     ])
 
-    text = chr(92).join(lines)
+    text = '\n'.join(lines)
     return send_dingtalk_message(title, text)
 
 

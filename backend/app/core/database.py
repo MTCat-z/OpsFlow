@@ -18,6 +18,7 @@ def _migrate_columns():
         'broadband_contracts': [
             ('renewal_cycle', "VARCHAR(20) DEFAULT 'annual'"),
             ('renewal_cost', 'FLOAT'),
+            ('last_renewed_date', 'DATE'),
         ],
     }
     with engine.connect() as conn:

@@ -63,10 +63,11 @@
             <StatusTag :value="row.status" :status-map="statusMap" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="270" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="formDialogRef?.openEdit(row)">编辑</el-button>
             <el-button size="small" type="success" :loading="row._notifying" @click="testNotify(row)">通知</el-button>
+            <el-button size="small" type="warning" :loading="row._renewing" @click="markRenewed(row)">已续费</el-button>
             <el-button size="small" type="danger" @click="del(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -173,6 +174,28 @@ async function testNotify(row) {
     ElMessage.error('发送失败')
   } finally {
     row._notifying = false
+  }
+}
+
+async function markRenewed(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认已为「${row.provider}」办理续费？\n标记后将清除通知记录，进入下一个续费周期。`,
+      '确认续费',
+      { type: 'warning' }
+    )
+  } catch (_e) {
+    return
+  }
+  row._renewing = true
+  try {
+    const r = await broadbandApi.markRenewed(row.id)
+    ElMessage.success(`已标记续费，下次续费日：${r.next_renewal_deadline}（剩余 ${r.next_renewal_days} 天）`)
+    loadData()
+  } catch (_e) {
+    ElMessage.error('标记失败')
+  } finally {
+    row._renewing = false
   }
 }
 

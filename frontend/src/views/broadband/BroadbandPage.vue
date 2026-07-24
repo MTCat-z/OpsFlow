@@ -138,7 +138,7 @@ async function loadData() {
   loading.value = true
   try {
     const r = await broadbandApi.list(query)
-    tableData.value = r.items.map((i) => ({ ...i, _notifying: false }))
+    tableData.value = r.items.map((i) => ({ ...i, _notifying: false, _renewing: false }))
     total.value = r.total
     const d = await broadbandApi.dashboard()
     Object.assign(dashboard, d)
@@ -182,7 +182,7 @@ async function markRenewed(row) {
     await ElMessageBox.confirm(
       `确认已为「${row.provider}」办理续费？\n标记后将清除通知记录，进入下一个续费周期。`,
       '确认续费',
-      { type: 'warning' }
+      { type: 'warning', confirmButtonText: '确认续费', cancelButtonText: '取消', center: true }
     )
   } catch (_e) {
     return
@@ -191,9 +191,9 @@ async function markRenewed(row) {
   try {
     const r = await broadbandApi.markRenewed(row.id)
     ElMessage.success(`已标记续费，下次续费日：${r.next_renewal_deadline}（剩余 ${r.next_renewal_days} 天）`)
-    loadData()
-  } catch (_e) {
-    ElMessage.error('标记失败')
+    await loadData()
+  } catch (e) {
+    ElMessage.error('标记失败：' + (e?.response?.data?.detail || e?.message || '未知错误'))
   } finally {
     row._renewing = false
   }

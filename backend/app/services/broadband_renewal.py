@@ -44,7 +44,9 @@ def get_next_renewal(contract, today: date = None) -> dict:
     """
     计算合同的下一个续费截止日。
 
-    逻辑：算出所有续费截止日，找下一个未过去的；若全过去则用 contract_end。
+    逻辑：
+    - 如果已标记续费（last_renewed_date），从续费日开始加一个周期算截止日
+    - 否则算出所有续费截止日，找下一个未过去的；若全过去则用 contract_end
 
     返回 dict:
         - next_deadline: 下一个续费截止日（date）
@@ -53,6 +55,27 @@ def get_next_renewal(contract, today: date = None) -> dict:
     """
     if today is None:
         today = date.today()
+
+    # 如果已标记续费，从续费日开始算下一个周期截止日
+    last_renewed = getattr(contract, 'last_renewed_date', None)
+    if last_renewed:
+        months = RENEWAL_CYCLE_MONTHS.get(contract.renewal_cycle, 12)
+        next_start = _add_months(last_renewed, months)
+        next_deadline = next_start - timedelta(days=1)
+        # 不能超过合同到期日
+        if next_deadline >= contract.contract_end:
+            next_deadline = contract.contract_end
+            deadline_type = 'contract_end'
+        else:
+            deadline_type = 'cycle'
+        days_remaining = (next_deadline - today).days
+        return {
+            'next_deadline': next_deadline,
+            'days_remaining': days_remaining,
+            'deadline_type': deadline_type,
+        }
+
+    # 未标记续费，按原逻辑从合同开始日算所有截止日
     deadlines = get_renewal_deadlines(
         contract.contract_start, contract.contract_end, contract.renewal_cycle
     )

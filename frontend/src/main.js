@@ -1,6 +1,11 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { User, Lock } from '@element-plus/icons-vue'
+
+// 命令式调用的 EP 组件样式（ElMessageBox/ElMessage 等 不在模板中使用，需要手动导入 CSS）
+import 'element-plus/es/components/message-box/style/css'
+import 'element-plus/es/components/message/style/css'
+
 import './styles/global.css'
 import { initTheme } from '@/composables/useTheme'
 import App from './App.vue'

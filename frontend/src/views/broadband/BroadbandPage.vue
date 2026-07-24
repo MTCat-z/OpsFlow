@@ -178,21 +178,26 @@ async function testNotify(row) {
 }
 
 async function markRenewed(row) {
+  console.warn('[markRenewed] called', row.id, row.provider)
   try {
     await ElMessageBox.confirm(
       `确认已为「${row.provider}」办理续费？\n标记后将清除通知记录，进入下一个续费周期。`,
       '确认续费',
-      { type: 'warning', confirmButtonText: '确认续费', cancelButtonText: '取消', center: true }
+      { type: 'warning', confirmButtonText: '确认续费', cancelButtonText: '取消' }
     )
+    console.warn('[markRenewed] confirmed, calling API...')
   } catch (_e) {
+    console.warn('[markRenewed] cancelled or error:', _e)
     return
   }
   row._renewing = true
   try {
     const r = await broadbandApi.markRenewed(row.id)
+    console.warn('[markRenewed] API response:', r)
     ElMessage.success(`已标记续费，下次续费日：${r.next_renewal_deadline}（剩余 ${r.next_renewal_days} 天）`)
     await loadData()
   } catch (e) {
+    console.error('[markRenewed] API error:', e)
     ElMessage.error('标记失败：' + (e?.response?.data?.detail || e?.message || '未知错误'))
   } finally {
     row._renewing = false

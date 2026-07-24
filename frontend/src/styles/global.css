@@ -262,3 +262,11 @@ body {
     transform: translateX(0);
   }
 }
+
+/* ═══ ElMessageBox 确保层级和居中 ═══ */
+.el-message-box {
+  z-index: 9999 !important;
+}
+.el-overlay {
+  z-index: 9998 !important;
+}

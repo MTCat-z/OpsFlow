@@ -28,6 +28,7 @@ def calc_annual_cost(renewal_cost: Optional[float], renewal_cycle: str) -> Optio
 
 
 class BroadbandContractBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     provider: str = Field(..., max_length=100)
     circuit_id: Optional[str] = Field(default=None, max_length=100)
     bandwidth_mbps: int = Field(...)

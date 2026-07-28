@@ -62,6 +62,7 @@ def create_access_token(user: User) -> str:
         "sub": str(user.id),
         "username": user.username,
         "role": user.role,
+        "org_id": user.org_id,
         "must_change_password": user.must_change_password,
         "exp": expire,
     }
@@ -93,6 +94,20 @@ def get_current_user(
 def require_admin(user: User = Depends(get_current_user)) -> User:
     """要求管理员角色"""
     if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+    return user
+
+
+def get_current_org(user: User = Depends(get_current_user)) -> Optional[int]:
+    """返回当前用户的 org_id，admin 返回 None（不过滤）"""
+    if user.role == "admin":
+        return None
+    return user.org_id
+
+
+def require_org_admin(user: User = Depends(get_current_user)) -> User:
+    """要求管理员或场地管理员角色"""
+    if user.role not in ("admin", "org_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
     return user
 

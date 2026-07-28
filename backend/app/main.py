@@ -34,6 +34,7 @@ def _seed_default_admin():
                 username=settings.DEFAULT_ADMIN_USERNAME,
                 password_hash=hash_password(settings.DEFAULT_ADMIN_PASSWORD),
                 role="admin",
+                org_id=None,
                 must_change_password=True,
             )
             session.add(admin)

@@ -5,6 +5,7 @@ from sqlmodel import Field, SQLModel
 
 
 class CommandBatchBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     name: str = Field(..., max_length=100)
     asset_ids: str = Field(default="", max_length=1000)
     commands: str = Field(default="", max_length=4000)
@@ -23,6 +24,7 @@ class CommandBatch(CommandBatchBase, table=True):
 
 
 class CommandResultBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     batch_id: int = Field(index=True)
     asset_id: Optional[int] = Field(default=None, index=True)
     asset_name: Optional[str] = Field(default=None, max_length=100)

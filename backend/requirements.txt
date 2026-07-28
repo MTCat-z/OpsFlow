@@ -6,6 +6,7 @@ python-multipart==0.0.9
 # Database ORM
 sqlmodel>=0.0.38
 alembic==1.13.1
+psycopg2-binary==2.9.9
 
 # Async Task Queue
 celery[redis]==5.3.6

@@ -6,6 +6,7 @@ from sqlmodel import Field, SQLModel
 # ---------- 拓扑节点 ----------
 
 class TopologyNodeBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     name: str = Field(..., max_length=100)
     ip_address: Optional[str] = Field(default=None, max_length=50)
     mac_address: Optional[str] = Field(default=None, max_length=20)
@@ -64,6 +65,7 @@ class TopologyNodeRead(TopologyNodeBase):
 # ---------- 拓扑连线 ----------
 
 class TopologyEdgeBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     source_node_id: int
     target_node_id: int
     link_type: str = Field(default='ethernet', max_length=30)
@@ -101,6 +103,7 @@ class TopologyEdgeRead(TopologyEdgeBase):
 class TopologyDiscoveryTaskBase(SQLModel):
     target_subnet: str = Field(..., max_length=100)
     scan_type: str = Field(default='discovery', max_length=20)
+    org_id: Optional[int] = Field(default=None, index=True)
 
 
 class TopologyDiscoveryTask(TopologyDiscoveryTaskBase, table=True):

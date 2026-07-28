@@ -3,6 +3,7 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 class AssetBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     name: str = Field(..., max_length=100)
     ip_address: str = Field(..., max_length=50, index=True)
     device_type: Optional[str] = Field(default=None, max_length=50)

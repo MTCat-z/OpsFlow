@@ -78,6 +78,15 @@ export const broadbandApi = {
   },
 }
 
+// 组织管理
+export const organizationApi = {
+  list: (p) => request.get('/organizations', { params: p }),
+  create: (d) => request.post('/organizations', d),
+  update: (id, d) => request.put('/organizations/' + id, d),
+  delete: (id) => request.delete('/organizations/' + id),
+  all: () => request.get('/organizations/all'),
+}
+
 // 网络拓扑
 export const topologyApi = {
   getGraph: (p) => request.get('/topology/graph', { params: p }),

@@ -100,6 +100,7 @@ import {
   Histogram,
   Monitor,
   Moon,
+  OfficeBuilding,
   Operation,
   Search,
   Share,
@@ -131,6 +132,7 @@ const allMenuItems = [
   { path: '/commands', title: '批量命令执行', icon: Operation, admin: false },
   { path: '/ipam', title: 'IPAM', icon: Grid, admin: false },
   { path: '/users', title: '用户管理', icon: UserFilled, admin: true },
+  { path: '/organizations', title: '组织管理', icon: OfficeBuilding, admin: true },
   { path: '/audit', title: '审计日志', icon: Document, admin: true },
 ]
 

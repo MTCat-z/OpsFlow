@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     DATABASE_URL: str = "sqlite:///./data/ops_platform.db"
+    # PostgreSQL 示例: postgresql://user:pass@localhost:5432/opsflow
     REDIS_URL: str = "redis://redis:6379/0"
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"

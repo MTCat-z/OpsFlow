@@ -9,6 +9,7 @@ class UserBase(SQLModel):
     username: str = Field(..., max_length=50, unique=True)
     role: str = Field(default='user', max_length=20)
     is_active: bool = Field(default=True)
+    org_id: Optional[int] = Field(default=None, foreign_key="organizations.id")
 
 
 class User(UserBase, table=True):
@@ -24,11 +25,13 @@ class UserCreate(SQLModel):
     username: str
     password: str
     role: str = 'user'
+    org_id: Optional[int] = None
 
 
 class UserUpdate(SQLModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    org_id: Optional[int] = None
 
 
 class UserRead(UserBase):
@@ -36,6 +39,7 @@ class UserRead(UserBase):
     must_change_password: bool
     created_at: datetime
     updated_at: datetime
+    org_id: Optional[int]
 
 
 class ChangePassword(SQLModel):
@@ -59,6 +63,7 @@ class AuditLog(SQLModel, table=True):
     resource_id: Optional[str] = Field(default=None, max_length=100)
     detail: Optional[str] = Field(default=None, max_length=500)
     ip_address: Optional[str] = Field(default=None, max_length=50)
+    org_id: Optional[int] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

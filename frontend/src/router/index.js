@@ -27,6 +27,7 @@ const routes = [
       { path: 'commands', name: 'Commands', component: () => import('@/views/commands/CommandBatchPage.vue'), meta: { title: '批量命令执行' } },
       { path: 'ipam', name: 'Ipam', component: () => import('@/views/ipam/IpamPage.vue'), meta: { title: 'IPAM' } },
       { path: 'users', name: 'Users', component: () => import('@/views/users/UserManagePage.vue'), meta: { title: '用户管理', admin: true } },
+      { path: 'organizations', name: 'Organizations', component: () => import('@/views/organizations/OrganizationList.vue'), meta: { title: '组织管理', admin: true } },
       { path: 'audit', name: 'Audit', component: () => import('@/views/users/AuditLogPage.vue'), meta: { title: '审计日志', admin: true } },
     ],
   },

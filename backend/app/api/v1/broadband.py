@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select, col
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.broadband import (
     BroadbandContract, BroadbandContractCreate,
     BroadbandContractUpdate, BroadbandContractRead,
@@ -19,9 +20,11 @@ router = APIRouter()
 
 
 @router.get('/dashboard', summary='宽带合同仪表盘')
-def broadband_dashboard(session: Session = Depends(get_session)):
+def broadband_dashboard(session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     today = date.today()
-    all_contracts = session.exec(select(BroadbandContract)).all()
+    q = select(BroadbandContract)
+    if org_id is not None: q = q.where(BroadbandContract.org_id == org_id)
+    all_contracts = session.exec(q).all()
     active = [c for c in all_contracts if c.status == 'active']
     expired = [c for c in all_contracts if c.status == 'expired']
     expiring_30 = [c for c in active if (c.contract_end - today).days <= 30 and (c.contract_end - today).days >= 0]
@@ -54,9 +57,12 @@ def list_contracts(
     size: int = Query(20, ge=1, le=100),
     keyword: Optional[str] = None,
     status: Optional[str] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q = select(BroadbandContract)
+    if org_id is not None:
+        q = q.where(BroadbandContract.org_id == org_id)
     if keyword:
         q = q.where(
             col(BroadbandContract.provider).contains(keyword)
@@ -81,11 +87,12 @@ def list_contracts(
 
 
 @router.post('', response_model=BroadbandContractRead, status_code=201)
-def create_contract(data: BroadbandContractCreate, session: Session = Depends(get_session)):
+def create_contract(data: BroadbandContractCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     # 如果 renewal_cost 有值但 annual_cost 没填，自动计算年费
     if data.renewal_cost is not None and data.annual_cost is None:
         data.annual_cost = calc_annual_cost(data.renewal_cost, data.renewal_cycle or 'annual')
     contract = BroadbandContract.model_validate(data)
+    contract.org_id = org_id
     session.add(contract)
     session.commit()
     session.refresh(contract)
@@ -235,10 +242,13 @@ def download_template():
 def export_excel(
     keyword: Optional[str] = None,
     status: Optional[str] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     """导出宽带合同数据为可编辑的 Excel，格式与导入模板一致"""
     q = select(BroadbandContract)
+    if org_id is not None:
+        q = q.where(BroadbandContract.org_id == org_id)
     if keyword:
         q = q.where(
             col(BroadbandContract.provider).contains(keyword)
@@ -297,7 +307,7 @@ def export_excel(
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={'Content-Disposition': 'attachment; filename=broadband_contracts.xlsx'},
     )
-def import_excel(file: UploadFile = File(...), session: Session = Depends(get_session)):
+def import_excel(file: UploadFile = File(...), session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     """上传 Excel 文件，批量创建宽带合同"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(400, '请上传 .xlsx 格式的 Excel 文件')
@@ -401,6 +411,7 @@ def import_excel(file: UploadFile = File(...), session: Session = Depends(get_se
                 reminder_days=reminder_days,
                 status=status,
                 notes=notes,
+                org_id=org_id,
             )
             session.add(contract)
             imported += 1

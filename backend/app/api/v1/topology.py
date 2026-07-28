@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, col
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.topology import (
     TopologyNode, TopologyNodeCreate, TopologyNodeUpdate, TopologyNodeRead,
     TopologyEdge, TopologyEdgeCreate, TopologyEdgeRead,
@@ -20,10 +21,14 @@ router = APIRouter()
 @router.get('/graph', summary='获取完整拓扑图')
 def get_graph(
     subnet: Optional[str] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q_nodes = select(TopologyNode)
     q_edges = select(TopologyEdge)
+    if org_id is not None:
+        q_nodes = q_nodes.where(TopologyNode.org_id == org_id)
+        q_edges = q_edges.where(TopologyEdge.org_id == org_id)
     if subnet:
         q_nodes = q_nodes.where(TopologyNode.subnet == subnet)
         node_ids = [n.id for n in session.exec(q_nodes).all()]
@@ -42,8 +47,9 @@ def get_graph(
 # ---------- 节点管理 ----------
 
 @router.post('/nodes', response_model=TopologyNodeRead, status_code=201)
-def create_node(data: TopologyNodeCreate, session: Session = Depends(get_session)):
+def create_node(data: TopologyNodeCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     node = TopologyNode.model_validate(data, update={'is_manual': True})
+    node.org_id = org_id
     session.add(node)
     session.commit()
     session.refresh(node)

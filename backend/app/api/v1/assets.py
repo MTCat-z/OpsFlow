@@ -6,6 +6,7 @@ from sqlmodel import Session, select, col
 import io
 from app.core.database import get_session
 from app.core.security import encrypt, decrypt
+from app.core.auth import get_current_org
 from app.models.asset import Asset, AssetCreate, AssetRead, AssetUpdate, AssetCredentials
 
 router = APIRouter()
@@ -24,8 +25,9 @@ def _asset_to_read(asset: Asset) -> AssetRead:
     return r
 
 @router.get('', response_model=dict, summary='分页查询资产列表')
-def list_assets(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), keyword: Optional[str]=None, device_type: Optional[str]=None, status: Optional[str]=None, session: Session=Depends(get_session)):
+def list_assets(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), keyword: Optional[str]=None, device_type: Optional[str]=None, status: Optional[str]=None, org_id: Optional[int]=Depends(get_current_org), session: Session=Depends(get_session)):
     q = select(Asset)
+    if org_id is not None: q = q.where(Asset.org_id == org_id)
     if keyword: q = q.where(col(Asset.name).contains(keyword)|col(Asset.ip_address).contains(keyword)|col(Asset.location).contains(keyword))
     if device_type: q = q.where(Asset.device_type==device_type)
     if status: q = q.where(Asset.status==status)
@@ -34,8 +36,9 @@ def list_assets(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), keywor
     return {'total': total, 'page': page, 'size': size, 'items': [_asset_to_read(a) for a in assets]}
 
 @router.post('', response_model=AssetRead, status_code=201)
-def create_asset(asset_in: AssetCreate, session: Session=Depends(get_session)):
+def create_asset(asset_in: AssetCreate, session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org)):
     asset = Asset.model_validate(asset_in)
+    asset.org_id = org_id
     for pf, ef in _CRED_FIELDS:
         v = getattr(asset_in, pf, None)
         if v: setattr(asset, ef, encrypt(v))

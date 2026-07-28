@@ -2,14 +2,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.scan_task import ScanTask, ScanTaskCreate, ScanTaskRead, ScanTaskResult
 from app.tasks.scan_tasks import run_nmap_scan
 
 router = APIRouter()
 
 @router.post('/start', response_model=ScanTaskRead, status_code=201)
-def start_scan(task_in: ScanTaskCreate, session: Session=Depends(get_session)):
+def start_scan(task_in: ScanTaskCreate, session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org)):
     task = ScanTask.model_validate(task_in)
+    task.org_id = org_id
     session.add(task); session.commit(); session.refresh(task)
     def _send_task():
         """在线程中发送 Celery 任务，避免阻塞主线程"""
@@ -25,8 +27,9 @@ def start_scan(task_in: ScanTaskCreate, session: Session=Depends(get_session)):
     return ScanTaskRead.model_validate(task)
 
 @router.get('/tasks', response_model=dict)
-def list_tasks(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), status: Optional[str]=None, session: Session=Depends(get_session)):
+def list_tasks(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), status: Optional[str]=None, org_id: Optional[int]=Depends(get_current_org), session: Session=Depends(get_session)):
     q = select(ScanTask).order_by(ScanTask.created_at.desc())
+    if org_id is not None: q = q.where(ScanTask.org_id == org_id)
     if status: q = q.where(ScanTask.status==status)
     total = len(session.exec(q).all())
     tasks = session.exec(q.offset((page-1)*size).limit(size)).all()

@@ -5,6 +5,7 @@ from sqlmodel import Field, SQLModel
 
 
 class IpamSubnetBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     cidr: str = Field(..., max_length=50)
     name: str = Field(..., max_length=100)
     location: Optional[str] = Field(default=None, max_length=200)
@@ -22,6 +23,7 @@ class IpamSubnet(IpamSubnetBase, table=True):
 
 
 class IpamAddressBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     subnet_id: Optional[int] = Field(default=None, index=True)
     ip_address: str = Field(..., max_length=50, index=True)
     hostname: Optional[str] = Field(default=None, max_length=100)

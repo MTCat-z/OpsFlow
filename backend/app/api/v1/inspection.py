@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func
 
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.inspection import (
     InspectionPlan,
     InspectionPlanCreate,
@@ -38,16 +39,19 @@ def inspection_dashboard(session: Session = Depends(get_session)):
 
 
 @router.get("/plans", response_model=dict)
-def list_plans(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), session: Session = Depends(get_session)):
+def list_plans(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), org_id: Optional[int] = Depends(get_current_org), session: Session = Depends(get_session)):
     q = select(InspectionPlan)
+    if org_id is not None:
+        q = q.where(InspectionPlan.org_id == org_id)
     total = session.exec(select(func.count()).select_from(q.subquery())).one()
     items = session.exec(q.offset((page - 1) * size).limit(size)).all()
     return {"total": total, "page": page, "size": size, "items": items}
 
 
 @router.post("/plans", response_model=InspectionPlanRead, status_code=201)
-def create_plan(data: InspectionPlanCreate, session: Session = Depends(get_session)):
+def create_plan(data: InspectionPlanCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     plan = InspectionPlan.model_validate(data)
+    plan.org_id = org_id
     session.add(plan)
     session.commit()
     session.refresh(plan)
@@ -114,9 +118,12 @@ def list_runs(
     size: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
     plan_id: Optional[int] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q = select(InspectionRun)
+    if org_id is not None:
+        q = q.where(InspectionRun.org_id == org_id)
     if status:
         q = q.where(InspectionRun.status == status)
     if plan_id:

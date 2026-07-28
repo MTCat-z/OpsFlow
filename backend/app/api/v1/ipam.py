@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, col, func, select
 
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.ipam import IpamAddress, IpamAddressCreate, IpamAddressRead, IpamAddressUpdate, IpamSubnet, IpamSubnetCreate, IpamSubnetRead, IpamSubnetUpdate
 
 router = APIRouter()
@@ -31,9 +32,12 @@ def list_subnets(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     keyword: Optional[str] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q = select(IpamSubnet)
+    if org_id is not None:
+        q = q.where(IpamSubnet.org_id == org_id)
     if keyword:
         q = q.where(col(IpamSubnet.name).contains(keyword) | col(IpamSubnet.cidr).contains(keyword))
     total = session.exec(select(func.count()).select_from(q.subquery())).one()
@@ -42,8 +46,9 @@ def list_subnets(
 
 
 @router.post("/subnets", response_model=IpamSubnetRead, status_code=201)
-def create_subnet(data: IpamSubnetCreate, session: Session = Depends(get_session)):
+def create_subnet(data: IpamSubnetCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     subnet = IpamSubnet.model_validate(data)
+    subnet.org_id = org_id
     session.add(subnet)
     session.commit()
     session.refresh(subnet)
@@ -112,9 +117,12 @@ def list_addresses(
     keyword: Optional[str] = None,
     subnet_id: Optional[int] = None,
     status: Optional[str] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q = select(IpamAddress)
+    if org_id is not None:
+        q = q.where(IpamAddress.org_id == org_id)
     if keyword:
         q = q.where(
             col(IpamAddress.ip_address).contains(keyword)
@@ -131,7 +139,7 @@ def list_addresses(
 
 
 @router.post("/addresses", response_model=IpamAddressRead, status_code=201)
-def create_address(data: IpamAddressCreate, session: Session = Depends(get_session)):
+def create_address(data: IpamAddressCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     # IP 冲突检测
     existing = session.exec(
         select(IpamAddress).where(
@@ -143,6 +151,7 @@ def create_address(data: IpamAddressCreate, session: Session = Depends(get_sessi
         raise HTTPException(400, f"IP {data.ip_address} 在该子网中已存在")
 
     address = IpamAddress.model_validate(data)
+    address.org_id = org_id
     session.add(address)
     session.commit()
     session.refresh(address)

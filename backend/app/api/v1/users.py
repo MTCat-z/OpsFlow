@@ -19,14 +19,17 @@ def list_users(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     keyword: Optional[str] = None,
-    admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     q = select(User).order_by(User.created_at.desc())
+    # org 过滤：非 admin 只返回同 org_id 的用户
+    if current_user.role != "admin":
+        q = q.where(User.org_id == current_user.org_id)
     if keyword:
         q = q.where(User.username.contains(keyword))
     items = session.exec(q.offset((page - 1) * size).limit(size)).all()
-    total = len(session.exec(select(User)).all())
+    total = len(session.exec(q).all())
     return {"total": total, "page": page, "size": size, "items": [UserRead.model_validate(u) for u in items]}
 
 
@@ -45,13 +48,14 @@ def create_user(
     if len(data.password) < 6:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="密码至少 6 位")
 
-    if data.role not in ("admin", "user"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="角色只能是 admin 或 user")
+    if data.role not in ("admin", "org_admin", "user"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="角色只能是 admin、org_admin 或 user")
 
     user = User(
         username=data.username,
         password_hash=hash_password(data.password),
         role=data.role,
+        org_id=data.org_id,
         must_change_password=True,
     )
     session.add(user)

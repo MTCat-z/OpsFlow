@@ -3,6 +3,7 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 class ScanTaskBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     target: str = Field(max_length=500)
     scan_type: str = Field(default='ping', max_length=20)
     ports: Optional[str] = Field(default=None, max_length=200)

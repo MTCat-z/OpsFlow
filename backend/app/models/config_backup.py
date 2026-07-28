@@ -5,6 +5,7 @@ from sqlmodel import Field, SQLModel
 
 
 class ConfigBackupJobBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     name: str = Field(..., max_length=100)
     asset_filter: Optional[str] = Field(default=None, max_length=500)
     schedule_cron: str = Field(default="0 2 * * *", max_length=100)
@@ -21,6 +22,7 @@ class ConfigBackupJob(ConfigBackupJobBase, table=True):
 
 
 class ConfigSnapshotBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     job_id: Optional[int] = Field(default=None, index=True)
     asset_id: Optional[int] = Field(default=None, index=True)
     asset_name: Optional[str] = Field(default=None, max_length=100)

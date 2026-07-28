@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, func, select
 
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.command import CommandBatch, CommandBatchCreate, CommandBatchRead, CommandBatchUpdate, CommandResult, CommandResultRead
 
 router = APIRouter()
@@ -28,9 +29,12 @@ def list_batches(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q = select(CommandBatch)
+    if org_id is not None:
+        q = q.where(CommandBatch.org_id == org_id)
     if status:
         q = q.where(CommandBatch.status == status)
     total = session.exec(select(func.count()).select_from(q.subquery())).one()
@@ -39,8 +43,9 @@ def list_batches(
 
 
 @router.post("/batches", response_model=CommandBatchRead, status_code=201)
-def create_batch(data: CommandBatchCreate, session: Session = Depends(get_session)):
+def create_batch(data: CommandBatchCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     batch = CommandBatch.model_validate(data)
+    batch.org_id = org_id
     session.add(batch)
     session.commit()
     session.refresh(batch)

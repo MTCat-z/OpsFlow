@@ -19,6 +19,9 @@
             <el-tag :type="row.role === 'admin' ? 'danger' : ''">{{ row.role === 'admin' ? '管理员' : '普通用户' }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="所属组织" width="140">
+          <template #default="{ row }">{{ orgNameMap[row.organization_id] || '-' }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="row.is_active ? 'success' : 'info'" size="small">{{ row.is_active ? '正常' : '禁用' }}</el-tag>
@@ -56,6 +59,11 @@
             <el-option label="管理员" value="admin" />
           </el-select>
         </el-form-item>
+        <el-form-item label="所属组织">
+          <el-select v-model="form.organization_id" placeholder="请选择组织" clearable style="width:100%">
+            <el-option v-for="org in organizations" :key="org.id" :label="org.name" :value="org.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item v-if="isEdit" label="状态">
           <el-switch v-model="form.is_active" active-text="启用" inactive-text="禁用" />
         </el-form-item>
@@ -82,7 +90,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { userApi } from '@/api'
+import { userApi, organizationApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -97,7 +105,14 @@ const keyword = ref('')
 const dlgVisible = ref(false), isEdit = ref(false), editingId = ref(null)
 const resetPwdVisible = ref(false), resetPwdUser = ref(null), newPassword = ref('')
 
-const form = reactive({ username: '', password: '', role: 'user', is_active: true })
+const form = reactive({ username: '', password: '', role: 'user', is_active: true, organization_id: null })
+
+const organizations = ref([])
+const orgNameMap = computed(() => {
+  const m = {}
+  organizations.value.forEach((o) => (m[o.id] = o.name))
+  return m
+})
 
 async function loadUsers() {
   loading.value = true
@@ -108,15 +123,22 @@ async function loadUsers() {
   finally { loading.value = false }
 }
 
+async function loadOrganizations() {
+  try {
+    const r = await organizationApi.all()
+    organizations.value = Array.isArray(r) ? r : (r.items || [])
+  } catch (_e) { /* handled by interceptor */ }
+}
+
 function showCreate() {
   isEdit.value = false; editingId.value = null
-  Object.assign(form, { username: '', password: '', role: 'user', is_active: true })
+  Object.assign(form, { username: '', password: '', role: 'user', is_active: true, organization_id: null })
   dlgVisible.value = true
 }
 
 function showEdit(row) {
   isEdit.value = true; editingId.value = row.id
-  Object.assign(form, { username: row.username, role: row.role, is_active: row.is_active })
+  Object.assign(form, { username: row.username, role: row.role, is_active: row.is_active, organization_id: row.organization_id ?? null })
   dlgVisible.value = true
 }
 
@@ -124,12 +146,12 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (isEdit.value) {
-      await userApi.update(editingId.value, { role: form.role, is_active: form.is_active })
+      await userApi.update(editingId.value, { role: form.role, is_active: form.is_active, organization_id: form.organization_id })
       ElMessage.success('用户已更新')
     } else {
       if (!form.username) return ElMessage.warning('请输入用户名')
       if (!form.password || form.password.length < 6) return ElMessage.warning('密码至少 6 位')
-      await userApi.create({ username: form.username, password: form.password, role: form.role })
+      await userApi.create({ username: form.username, password: form.password, role: form.role, organization_id: form.organization_id })
       ElMessage.success('用户已创建')
     }
     dlgVisible.value = false
@@ -161,5 +183,8 @@ async function handleResetPwd() {
   finally { submitting.value = false }
 }
 
-onMounted(loadUsers)
+onMounted(() => {
+  loadUsers()
+  loadOrganizations()
+})
 </script>

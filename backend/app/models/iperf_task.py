@@ -3,6 +3,7 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 class IperfTaskBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     server_host: str = Field(max_length=100)
     server_port: int = Field(default=5201)
     protocol: str = Field(default='tcp', max_length=10)

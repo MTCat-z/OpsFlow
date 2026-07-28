@@ -12,6 +12,7 @@ from app.api.v1 import (
     inspection,
     ipam,
     iperf,
+    organizations,
     scan,
     topology,
     users,
@@ -38,3 +39,4 @@ api_router.include_router(inspection.router, prefix="/inspection", tags=["inspec
 api_router.include_router(config_backup.router, prefix="/config-backup", tags=["config-backup"], dependencies=_auth)
 api_router.include_router(commands.router, prefix="/commands", tags=["commands"], dependencies=_auth)
 api_router.include_router(ipam.router, prefix="/ipam", tags=["ipam"], dependencies=_auth)
+api_router.include_router(organizations.router, dependencies=_auth)

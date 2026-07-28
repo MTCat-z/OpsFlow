@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, col, func, select
 
 from app.core.database import get_session
+from app.core.auth import get_current_org
 from app.models.config_backup import (
     ConfigBackupJob,
     ConfigBackupJobCreate,
@@ -32,16 +33,19 @@ def backup_dashboard(session: Session = Depends(get_session)):
 
 
 @router.get("/jobs", response_model=dict)
-def list_jobs(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), session: Session = Depends(get_session)):
+def list_jobs(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), org_id: Optional[int] = Depends(get_current_org), session: Session = Depends(get_session)):
     q = select(ConfigBackupJob)
+    if org_id is not None:
+        q = q.where(ConfigBackupJob.org_id == org_id)
     total = session.exec(select(func.count()).select_from(q.subquery())).one()
     items = session.exec(q.offset((page - 1) * size).limit(size)).all()
     return {"total": total, "page": page, "size": size, "items": items}
 
 
 @router.post("/jobs", response_model=ConfigBackupJobRead, status_code=201)
-def create_job(data: ConfigBackupJobCreate, session: Session = Depends(get_session)):
+def create_job(data: ConfigBackupJobCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
     job = ConfigBackupJob.model_validate(data)
+    job.org_id = org_id
     session.add(job)
     session.commit()
     session.refresh(job)
@@ -96,9 +100,12 @@ def list_snapshots(
     size: int = Query(20, ge=1, le=100),
     keyword: Optional[str] = None,
     asset_id: Optional[int] = None,
+    org_id: Optional[int] = Depends(get_current_org),
     session: Session = Depends(get_session),
 ):
     q = select(ConfigSnapshot)
+    if org_id is not None:
+        q = q.where(ConfigSnapshot.org_id == org_id)
     if keyword:
         q = q.where(
             col(ConfigSnapshot.asset_name).contains(keyword)

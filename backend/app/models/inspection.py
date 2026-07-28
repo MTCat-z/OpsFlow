@@ -5,6 +5,7 @@ from sqlmodel import Field, SQLModel
 
 
 class InspectionPlanBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     name: str = Field(..., max_length=100)
     scope: str = Field(default="assets", max_length=50)
     schedule_cron: str = Field(default="0 9 * * *", max_length=100)
@@ -22,6 +23,7 @@ class InspectionPlan(InspectionPlanBase, table=True):
 
 
 class InspectionRunBase(SQLModel):
+    org_id: Optional[int] = Field(default=None, index=True)
     plan_id: Optional[int] = Field(default=None, index=True)
     status: str = Field(default="pending", max_length=20, index=True)
     summary: Optional[str] = Field(default=None, max_length=1000)

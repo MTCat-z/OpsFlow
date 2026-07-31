@@ -85,6 +85,9 @@ export const organizationApi = {
   update: (id, d) => request.put('/organizations/' + id, d),
   delete: (id) => request.delete('/organizations/' + id),
   all: () => request.get('/organizations/all'),
+  generateProbe: (id) => request.post('/organizations/' + id + '/generate-probe'),
+  resetProbe: (id) => request.post('/organizations/' + id + '/reset-probe'),
+  downloadProbeConfig: (id) => request.get('/organizations/' + id + '/probe-config', { responseType: 'blob' }),
 }
 
 // 网络拓扑

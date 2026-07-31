@@ -31,6 +31,14 @@
         </el-table-column>
         <el-table-column prop="user_count" label="用户数" width="90" align="center" sortable />
         <el-table-column prop="asset_count" label="资产数" width="90" align="center" sortable />
+        <el-table-column label="探针状态" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.probe_key" size="small" :type="row.probe_online ? 'success' : 'danger'">
+              {{ row.probe_online ? '在线' : '离线' }}
+            </el-tag>
+            <el-tag v-else size="small" type="info">未配置</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="钉钉配置" width="110" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="row.dingtalk_webhook ? 'success' : 'info'">{{ row.dingtalk_webhook ? '已配置' : '未配置' }}</el-tag>
@@ -44,9 +52,11 @@
         <el-table-column prop="created_at" label="创建时间" width="170">
           <template #default="{ row }">{{ row.created_at?.replace('T', ' ').substring(0, 19) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="290" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="showEdit(row)">编辑</el-button>
+            <el-button size="small" type="warning" @click="generateProbe(row)">生成探针</el-button>
+            <el-button size="small" type="success" @click="downloadProbeConfig(row)" :disabled="!row.probe_key">下载配置</el-button>
             <el-button size="small" type="danger" @click="del(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -205,6 +215,50 @@ async function del(row) {
   await organizationApi.delete(row.id)
   ElMessage.success('已删除')
   loadData()
+}
+
+async function generateProbe(row) {
+  try {
+    await ElMessageBox.confirm(
+      `为「${row.name}」生成探针配置？\n将自动生成 VPN 密钥和认证密钥。`,
+      '生成探针配置',
+      { type: 'warning', confirmButtonText: '生成', cancelButtonText: '取消' }
+    )
+  } catch (_e) {
+    return
+  }
+  try {
+    const r = await organizationApi.generateProbe(row.id)
+    ElMessageBox.alert(
+      `探针配置已生成！\n\n` +
+      `组织编码: ${r.org_code}\n` +
+      `探针密钥: ${r.probe_key}\n` +
+      `隧道 IP: ${r.wg_tunnel_ip}\n\n` +
+      `请点击"下载配置"获取部署包，发给分公司 IT 人员。`,
+      '生成成功',
+      { type: 'success' }
+    )
+    loadData()
+  } catch (e) {
+    ElMessage.error('生成失败: ' + (e?.response?.data?.detail || e?.message || '未知错误'))
+  }
+}
+
+async function downloadProbeConfig(row) {
+  try {
+    const blob = await organizationApi.downloadProbeConfig(row.id)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `deploy-probe-${row.code}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('配置包已下载')
+  } catch (e) {
+    ElMessage.error('下载失败: ' + (e?.response?.data?.detail || e?.message || '未知错误'))
+  }
 }
 
 onMounted(() => loadData())

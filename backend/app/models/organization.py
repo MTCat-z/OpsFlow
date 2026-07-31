@@ -48,7 +48,8 @@ class OrganizationRead(SQLModel):
     id: int
     name: str
     code: str
-    probe_url: Optional[str]
+    probe_url: Optional[str] = None
+    probe_key: Optional[str] = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

@@ -1,0 +1,15 @@
+services:
+  probe:
+    build:
+      context: ../..
+      dockerfile: deploy/probe/Dockerfile
+    container_name: opsflow-probe
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file: .env
+    volumes:
+      - ./wg0.conf:/etc/wireguard/wg0.conf:ro
+    restart: unless-stopped

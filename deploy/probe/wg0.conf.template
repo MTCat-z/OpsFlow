@@ -1,0 +1,9 @@
+[Interface]
+PrivateKey = <探针私钥>
+Address = <探针隧道IP>/24
+
+[Peer]
+PublicKey = <中心公钥>
+Endpoint = <中心公网IP>:51820
+AllowedIPs = 10.99.0.0/24
+PersistentKeepalive = 25

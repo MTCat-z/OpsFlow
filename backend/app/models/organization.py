@@ -10,6 +10,11 @@ class Organization(SQLModel, table=True):
     code: str = Field(..., max_length=50, unique=True)
     probe_url: Optional[str] = Field(default=None, max_length=500)
     probe_key: Optional[str] = Field(default=None, max_length=200)
+    # WireGuard 探针 VPN
+    wg_private_key: Optional[str] = Field(default=None, max_length=200)
+    wg_public_key: Optional[str] = Field(default=None, max_length=200)
+    wg_tunnel_ip: Optional[str] = Field(default=None, max_length=50)
+    probe_last_heartbeat: Optional[datetime] = Field(default=None)
     dingtalk_webhook: Optional[str] = Field(default=None, max_length=500)
     dingtalk_secret: Optional[str] = Field(default=None, max_length=200)
     zabbix_url: Optional[str] = Field(default=None, max_length=500)

@@ -26,6 +26,12 @@ def _get_existing_columns(conn, table: str) -> set:
 def _migrate_columns():
     """为已有表自动补充缺失列（create_all 不会 ALTER TABLE）"""
     _MIGRATIONS = {
+        'organizations': [
+            ('wg_private_key', 'VARCHAR(200)'),
+            ('wg_public_key', 'VARCHAR(200)'),
+            ('wg_tunnel_ip', 'VARCHAR(50)'),
+            ('probe_last_heartbeat', 'TIMESTAMP'),
+        ],
         'assets': [
             ('ssh_private_key_encrypted', 'VARCHAR'),
             ('auth_type', "VARCHAR(20) DEFAULT 'password'"),

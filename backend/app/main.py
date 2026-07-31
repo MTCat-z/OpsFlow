@@ -1,6 +1,7 @@
 """
-内网运维集成工具平台 — FastAPI 主入口
+内网运维集成工具平台 - FastAPI 主入口
 """
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket
@@ -15,6 +16,8 @@ from app.core.database import create_db_and_tables
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期：启动时初始化数据库并创建默认管理员"""
+    if settings.SECRET_KEY == "change-me-in-production":
+        print("[init] ⚠️ 严重安全警告: SECRET_KEY 使用默认值，请立即在 .env 中修改！")
     create_db_and_tables()
     _seed_default_admin()
     yield
@@ -30,9 +33,10 @@ def _seed_default_admin():
     with Session(engine) as session:
         admin_count = len(session.exec(select(User).where(User.role == "admin")).all())
         if admin_count == 0:
+            password = settings.DEFAULT_ADMIN_PASSWORD or secrets.token_urlsafe(12)
             admin = User(
                 username=settings.DEFAULT_ADMIN_USERNAME,
-                password_hash=hash_password(settings.DEFAULT_ADMIN_PASSWORD),
+                password_hash=hash_password(password),
                 role="admin",
                 org_id=None,
                 must_change_password=True,
@@ -40,6 +44,8 @@ def _seed_default_admin():
             session.add(admin)
             session.commit()
             print(f"[init] 已创建默认管理员: {settings.DEFAULT_ADMIN_USERNAME}")
+            print(f"[init] 默认管理员密码: {password}")
+            print(f"[init] ⚠️ 请立即登录并修改默认密码！")
 
 
 app = FastAPI(

@@ -64,7 +64,6 @@ def get_probe_tasks(
             'target': t.target,
             'scan_type': t.scan_type,
             'ports': t.ports,
-            'arguments': t.arguments,
         })
 
     # 拉取 pending 的测速任务

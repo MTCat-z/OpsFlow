@@ -6,7 +6,8 @@ from sqlmodel import Session, select, col
 import io
 from app.core.database import get_session
 from app.core.security import encrypt, decrypt
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, require_admin, check_org_access
+from app.models.user import User
 from app.models.asset import Asset, AssetCreate, AssetRead, AssetUpdate, AssetCredentials
 
 router = APIRouter()
@@ -46,15 +47,15 @@ def create_asset(asset_in: AssetCreate, session: Session=Depends(get_session), o
     return _asset_to_read(asset)
 
 @router.get('/{asset_id}', response_model=AssetRead)
-def get_asset(asset_id: int, session: Session=Depends(get_session)):
+def get_asset(asset_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     asset = session.get(Asset, asset_id)
-    if not asset: raise HTTPException(404, '资产不存在')
+    if not asset or not check_org_access(asset, current_user): raise HTTPException(404, '资产不存在')
     return _asset_to_read(asset)
 
 @router.put('/{asset_id}', response_model=AssetRead)
-def update_asset(asset_id: int, asset_in: AssetUpdate, session: Session=Depends(get_session)):
+def update_asset(asset_id: int, asset_in: AssetUpdate, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     asset = session.get(Asset, asset_id)
-    if not asset: raise HTTPException(404, '资产不存在')
+    if not asset or not check_org_access(asset, current_user): raise HTTPException(404, '资产不存在')
     data = asset_in.model_dump(exclude_unset=True)
     for pf, ef in _CRED_FIELDS:
         if pf in data:
@@ -65,13 +66,13 @@ def update_asset(asset_id: int, asset_in: AssetUpdate, session: Session=Depends(
     return _asset_to_read(asset)
 
 @router.delete('/{asset_id}', status_code=204)
-def delete_asset(asset_id: int, session: Session=Depends(get_session)):
+def delete_asset(asset_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     asset = session.get(Asset, asset_id)
-    if not asset: raise HTTPException(404, '资产不存在')
+    if not asset or not check_org_access(asset, current_user): raise HTTPException(404, '资产不存在')
     session.delete(asset); session.commit()
 
 @router.get('/{asset_id}/credentials', response_model=AssetCredentials)
-def get_credentials(asset_id: int, session: Session=Depends(get_session)):
+def get_credentials(asset_id: int, session: Session=Depends(get_session), _: User=Depends(require_admin)):
     asset = session.get(Asset, asset_id)
     if not asset: raise HTTPException(404, '资产不存在')
     return AssetCredentials(

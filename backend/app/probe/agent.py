@@ -33,8 +33,6 @@ def run_nmap(target, scan_type='ping', ports=None, arguments=None):
         'full': '-sV -O --open',
     }.get(scan_type, '-sn')
 
-    if arguments:
-        scan_args += f' {arguments}'
     if ports and scan_type != 'ping':
         scan_args += f' -p {ports}'
 

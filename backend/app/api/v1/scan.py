@@ -2,7 +2,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from app.core.database import get_session
-from app.core.auth import get_current_org
+import re
+from app.core.auth import get_current_org, get_current_user, check_org_access
+from app.models.user import User
 from app.models.scan_task import ScanTask, ScanTaskCreate, ScanTaskRead, ScanTaskResult
 from app.tasks.scan_tasks import run_nmap_scan
 
@@ -10,6 +12,8 @@ router = APIRouter()
 
 @router.post('/start', response_model=ScanTaskRead, status_code=201)
 def start_scan(task_in: ScanTaskCreate, session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org)):
+    if task_in.ports and not re.match(r'^[\d,\-]+$', task_in.ports):
+        raise HTTPException(400, 'ports 字段仅允许数字、逗号、短横线')
     task = ScanTask.model_validate(task_in)
     task.org_id = org_id
     session.add(task); session.commit(); session.refresh(task)
@@ -36,15 +40,15 @@ def list_tasks(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), status:
     return {'total': total, 'page': page, 'size': size, 'items': [ScanTaskRead.model_validate(t) for t in tasks]}
 
 @router.get('/tasks/{task_id}', response_model=ScanTaskResult)
-def get_task(task_id: int, session: Session=Depends(get_session)):
+def get_task(task_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     task = session.get(ScanTask, task_id)
-    if not task: raise HTTPException(404, '任务不存在')
+    if not task or not check_org_access(task, current_user): raise HTTPException(404, '任务不存在')
     return ScanTaskResult.model_validate(task)
 
 @router.delete('/tasks/{task_id}', status_code=204)
-def delete_task(task_id: int, session: Session=Depends(get_session)):
+def delete_task(task_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     task = session.get(ScanTask, task_id)
-    if not task: raise HTTPException(404, '任务不存在')
+    if not task or not check_org_access(task, current_user): raise HTTPException(404, '任务不存在')
     if task.celery_task_id and task.status in ('pending','running'):
         try:
             from app.tasks.worker import celery_app

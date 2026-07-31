@@ -51,7 +51,8 @@ function connectWs() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
   const cols = term.cols
   const rows = term.rows
-  const url = `${proto}//${location.host}/ws/terminal/${assetId}?cols=${cols}&rows=${rows}`
+  const token = localStorage.getItem('token')
+  const url = `${proto}//${location.host}/ws/terminal/${assetId}?cols=${cols}&rows=${rows}&token=${token}`
 
   ws = new WebSocket(url)
   ws.onopen = () => {

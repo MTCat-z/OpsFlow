@@ -1,4 +1,5 @@
 import json
+import re
 import ipaddress
 from datetime import datetime
 from typing import Optional
@@ -33,7 +34,6 @@ def run_nmap_scan(self, task_id: int):
         target = task.target
         scan_type = task.scan_type
         ports = task.ports
-        arguments = task.arguments
         if not _is_rfc1918(target):
             task.status = 'failed'
             task.error_message = f'目标 {target} 不在允许的内网范围内'
@@ -46,7 +46,16 @@ def run_nmap_scan(self, task_id: int):
         session.add(task); session.commit()
     try:
         nm = nmap.PortScanner()
-        scan_args = _build_nmap_args(scan_type, ports, arguments)
+        if ports and not re.match(r'^[\d,\-]+$', ports):
+            with Session(engine) as session:
+                task = session.get(ScanTask, task_id)
+                if task:
+                    task.status = 'failed'
+                    task.error_message = f'ports 字段格式非法: {ports}'
+                    task.finished_at = datetime.utcnow()
+                    session.add(task); session.commit()
+            return {'error': f'ports 字段格式非法: {ports}'}
+        scan_args = _build_nmap_args(scan_type, ports)
         nm.scan(hosts=target, arguments=scan_args)
         result = _parse_nmap_result(nm)
         with Session(engine) as session:
@@ -68,11 +77,10 @@ def run_nmap_scan(self, task_id: int):
         raise
 
 
-def _build_nmap_args(scan_type, ports, extra_args):
+def _build_nmap_args(scan_type, ports):
     args_map = {'ping': '-sn', 'port': '-sS --open', 'service': '-sV --open', 'full': '-sV -O --open'}
     base = args_map.get(scan_type, '-sn')
     if ports and scan_type != 'ping': base += f' -p {ports}'
-    if extra_args: base += f' {extra_args}'
     return base
 
 

@@ -2,7 +2,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access
+from app.models.user import User
 from app.models.iperf_task import IperfTask, IperfTaskCreate, IperfTaskRead, IperfTaskResult
 from app.tasks.iperf_tasks import run_iperf_test
 
@@ -35,15 +36,15 @@ def list_tasks(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), status:
     return {'total': total, 'page': page, 'size': size, 'items': [IperfTaskRead.model_validate(t) for t in tasks]}
 
 @router.get('/tasks/{task_id}', response_model=IperfTaskResult)
-def get_task(task_id: int, session: Session=Depends(get_session)):
+def get_task(task_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     task = session.get(IperfTask, task_id)
-    if not task: raise HTTPException(404, '任务不存在')
+    if not task or not check_org_access(task, current_user): raise HTTPException(404, '任务不存在')
     return IperfTaskResult.model_validate(task)
 
 @router.delete('/tasks/{task_id}', status_code=204)
-def delete_task(task_id: int, session: Session=Depends(get_session)):
+def delete_task(task_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     task = session.get(IperfTask, task_id)
-    if not task: raise HTTPException(404, '任务不存在')
+    if not task or not check_org_access(task, current_user): raise HTTPException(404, '任务不存在')
     if task.celery_task_id and task.status in ('pending','running'):
         try:
             from app.tasks.worker import celery_app

@@ -91,6 +91,28 @@ def get_current_user(
     return user
 
 
+def verify_ws_token(token: str, session: Session) -> Optional[User]:
+    """WebSocket 专用 token 验证，返回 User 或 None（不抛异常）"""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        return None
+    user = session.get(User, user_id)
+    if not user or not user.is_active:
+        return None
+    return user
+
+
+def check_org_access(resource, user: User) -> bool:
+    """检查用户是否有权访问该资源（基于 org_id），admin 无限制"""
+    if user.role == "admin":
+        return True
+    return resource.org_id == user.org_id
+
+
 def require_admin(user: User = Depends(get_current_user)) -> User:
     """要求管理员角色"""
     if user.role != "admin":

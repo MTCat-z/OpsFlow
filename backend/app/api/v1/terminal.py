@@ -15,15 +15,28 @@ logger = logging.getLogger(__name__)
 
 async def terminal_ws_handler(websocket: WebSocket, asset_id: int):
     """WebSocket 终端会话入口"""
-    await websocket.accept()
+    from app.core.auth import verify_ws_token, check_org_access
 
-    # 从 DB 加载资产并解密凭据
+    # 认证：从查询参数提取 token 并验证
+    token = websocket.query_params.get('token')
     with Session(engine) as session:
+        user = verify_ws_token(token, session)
+        if not user:
+            await websocket.close(code=4001)
+            return
+
+        # 从 DB 加载资产
         asset = session.get(Asset, asset_id)
         if not asset:
-            await websocket.send_text('\r\n[错误] 资产不存在\r\n')
             await websocket.close(code=4004)
             return
+
+        # 检查 org_id 归属
+        if not check_org_access(asset, user):
+            await websocket.close(code=4033)
+            return
+
+        # 解密凭据
         ip = asset.ip_address
         port = asset.ssh_port
         protocol = asset.protocol
@@ -31,6 +44,8 @@ async def terminal_ws_handler(websocket: WebSocket, asset_id: int):
         username = decrypt(asset.username_encrypted) if asset.username_encrypted else None
         password = decrypt(asset.password_encrypted) if asset.password_encrypted else None
         ssh_key_text = decrypt(asset.ssh_private_key_encrypted) if asset.ssh_private_key_encrypted else None
+
+    await websocket.accept()
 
     cols = int(websocket.query_params.get('cols', 120))
     rows = int(websocket.query_params.get('rows', 40))

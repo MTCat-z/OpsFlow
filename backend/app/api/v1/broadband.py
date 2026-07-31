@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select, col
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access
+from app.models.user import User
 from app.models.broadband import (
     BroadbandContract, BroadbandContractCreate,
     BroadbandContractUpdate, BroadbandContractRead,
@@ -100,9 +101,9 @@ def create_contract(data: BroadbandContractCreate, session: Session = Depends(ge
 
 
 @router.get('/{contract_id}', response_model=dict)
-def get_contract(contract_id: int, session: Session = Depends(get_session)):
+def get_contract(contract_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     contract = session.get(BroadbandContract, contract_id)
-    if not contract:
+    if not contract or not check_org_access(contract, current_user):
         raise HTTPException(404, '合同不存在')
     today = date.today()
     item = contract.model_dump(mode='json')
@@ -114,9 +115,9 @@ def get_contract(contract_id: int, session: Session = Depends(get_session)):
 
 
 @router.put('/{contract_id}', response_model=BroadbandContractRead)
-def update_contract(contract_id: int, data: BroadbandContractUpdate, session: Session = Depends(get_session)):
+def update_contract(contract_id: int, data: BroadbandContractUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     contract = session.get(BroadbandContract, contract_id)
-    if not contract:
+    if not contract or not check_org_access(contract, current_user):
         raise HTTPException(404, '合同不存在')
     update_data = data.model_dump(exclude_unset=True)
     
@@ -138,18 +139,18 @@ def update_contract(contract_id: int, data: BroadbandContractUpdate, session: Se
 
 
 @router.delete('/{contract_id}', status_code=204)
-def delete_contract(contract_id: int, session: Session = Depends(get_session)):
+def delete_contract(contract_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     contract = session.get(BroadbandContract, contract_id)
-    if not contract:
+    if not contract or not check_org_access(contract, current_user):
         raise HTTPException(404, '合同不存在')
     session.delete(contract)
     session.commit()
 
 
 @router.post('/{contract_id}/test-notify', summary='发送测试钉钉通知')
-def test_notify(contract_id: int, session: Session = Depends(get_session)):
+def test_notify(contract_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     contract = session.get(BroadbandContract, contract_id)
-    if not contract:
+    if not contract or not check_org_access(contract, current_user):
         raise HTTPException(404, '合同不存在')
     renewal = get_next_renewal(contract)
     ok = send_renewal_reminder(
@@ -173,10 +174,10 @@ def test_notify(contract_id: int, session: Session = Depends(get_session)):
 
 
 @router.post('/{contract_id}/mark-renewed', summary='标记已续费，进入下一周期')
-def mark_renewed(contract_id: int, session: Session = Depends(get_session)):
+def mark_renewed(contract_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     """标记合同已续费，清除通知记录，进入下一个续费周期"""
     contract = session.get(BroadbandContract, contract_id)
-    if not contract:
+    if not contract or not check_org_access(contract, current_user):
         raise HTTPException(404, '合同不存在')
     from datetime import date as date_type
     contract.last_renewed_date = date_type.today()

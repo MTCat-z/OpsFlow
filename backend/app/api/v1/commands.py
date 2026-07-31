@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, func, select
 
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access
+from app.models.user import User
 from app.models.command import CommandBatch, CommandBatchCreate, CommandBatchRead, CommandBatchUpdate, CommandResult, CommandResultRead
 
 router = APIRouter()
@@ -53,17 +54,17 @@ def create_batch(data: CommandBatchCreate, session: Session = Depends(get_sessio
 
 
 @router.get("/batches/{batch_id}", response_model=CommandBatchRead)
-def get_batch(batch_id: int, session: Session = Depends(get_session)):
+def get_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     batch = session.get(CommandBatch, batch_id)
-    if not batch:
+    if not batch or not check_org_access(batch, current_user):
         raise HTTPException(404, "command batch not found")
     return batch
 
 
 @router.put("/batches/{batch_id}", response_model=CommandBatchRead)
-def update_batch(batch_id: int, data: CommandBatchUpdate, session: Session = Depends(get_session)):
+def update_batch(batch_id: int, data: CommandBatchUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     batch = session.get(CommandBatch, batch_id)
-    if not batch:
+    if not batch or not check_org_access(batch, current_user):
         raise HTTPException(404, "command batch not found")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(batch, key, value)
@@ -74,9 +75,9 @@ def update_batch(batch_id: int, data: CommandBatchUpdate, session: Session = Dep
 
 
 @router.delete("/batches/{batch_id}", status_code=204)
-def delete_batch(batch_id: int, session: Session = Depends(get_session)):
+def delete_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     batch = session.get(CommandBatch, batch_id)
-    if not batch:
+    if not batch or not check_org_access(batch, current_user):
         raise HTTPException(404, "command batch not found")
     if batch.celery_task_id and batch.status in ("pending", "running"):
         try:
@@ -89,12 +90,12 @@ def delete_batch(batch_id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/batches/{batch_id}/execute")
-def execute_batch(batch_id: int, session: Session = Depends(get_session)):
+def execute_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     """执行批量命令任务（先检查危险命令）"""
     from app.services.command_guard import check_dangerous_commands
 
     batch = session.get(CommandBatch, batch_id)
-    if not batch:
+    if not batch or not check_org_access(batch, current_user):
         raise HTTPException(404, "command batch not found")
     if batch.status not in ("draft", "failed"):
         raise HTTPException(400, f"当前状态 {batch.status} 不可执行")
@@ -121,5 +122,8 @@ def execute_batch(batch_id: int, session: Session = Depends(get_session)):
 
 
 @router.get("/batches/{batch_id}/results", response_model=list[CommandResultRead])
-def list_results(batch_id: int, session: Session = Depends(get_session)):
+def list_results(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    batch = session.get(CommandBatch, batch_id)
+    if not batch or not check_org_access(batch, current_user):
+        raise HTTPException(404, "command batch not found")
     return session.exec(select(CommandResult).where(CommandResult.batch_id == batch_id)).all()

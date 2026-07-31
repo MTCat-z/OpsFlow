@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     DEFAULT_ADMIN_USERNAME: str = "admin"
-    DEFAULT_ADMIN_PASSWORD: str = "admin123"
+    DEFAULT_ADMIN_PASSWORD: str = ""
     CORS_ORIGINS: List[str] = [
         "http://localhost:8080",
         "http://localhost:5173",

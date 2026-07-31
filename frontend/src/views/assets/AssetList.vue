@@ -19,7 +19,7 @@
         <el-table-column prop="status" label="状态" width="90"><template #default="{ row }"><el-tag :type="row.status==='active'?'success':'info'">{{ row.status==='active'?'在用':'停用' }}</el-tag></template></el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="viewCred(row)">账号</el-button>
+            <el-button v-if="authStore.isAdmin" size="small" @click="viewCred(row)">账号</el-button>
             <el-button size="small" type="success" @click="openTerminal(row)">终端</el-button>
             <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button size="small" type="danger" @click="del(row)">删除</el-button>
@@ -80,6 +80,9 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { assetApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 const loading = ref(false), submitting = ref(false), tableData = ref([]), total = ref(0)
 const dlg = ref(false), credDlg = ref(false), editId = ref(null), formRef = ref(null)

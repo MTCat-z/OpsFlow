@@ -82,6 +82,12 @@ def _migrate_columns():
         'command_results': [
             ('org_id', 'INTEGER'),
         ],
+        'audit_logs': [
+            ('org_id', 'INTEGER'),
+        ],
+        'topology_discovery_tasks': [
+            ('org_id', 'INTEGER'),
+        ],
     }
     with engine.connect() as conn:
         for table, columns in _MIGRATIONS.items():

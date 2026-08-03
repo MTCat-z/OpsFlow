@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, func, select
 
 from app.core.database import get_session
-from app.core.auth import get_current_org, get_current_user, check_org_access
+from app.core.auth import get_current_org, get_current_user, check_org_access, require_org_admin
 from app.models.user import User
 from app.models.command import CommandBatch, CommandBatchCreate, CommandBatchRead, CommandBatchUpdate, CommandResult, CommandResultRead
 
@@ -44,7 +44,7 @@ def list_batches(
 
 
 @router.post("/batches", response_model=CommandBatchRead, status_code=201)
-def create_batch(data: CommandBatchCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
+def create_batch(data: CommandBatchCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org), admin: User = Depends(require_org_admin)):
     batch = CommandBatch.model_validate(data)
     batch.org_id = org_id
     session.add(batch)
@@ -62,7 +62,7 @@ def get_batch(batch_id: int, session: Session = Depends(get_session), current_us
 
 
 @router.put("/batches/{batch_id}", response_model=CommandBatchRead)
-def update_batch(batch_id: int, data: CommandBatchUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_batch(batch_id: int, data: CommandBatchUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     batch = session.get(CommandBatch, batch_id)
     if not batch or not check_org_access(batch, current_user):
         raise HTTPException(404, "command batch not found")
@@ -75,7 +75,7 @@ def update_batch(batch_id: int, data: CommandBatchUpdate, session: Session = Dep
 
 
 @router.delete("/batches/{batch_id}", status_code=204)
-def delete_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     batch = session.get(CommandBatch, batch_id)
     if not batch or not check_org_access(batch, current_user):
         raise HTTPException(404, "command batch not found")
@@ -90,7 +90,7 @@ def delete_batch(batch_id: int, session: Session = Depends(get_session), current
 
 
 @router.post("/batches/{batch_id}/execute")
-def execute_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def execute_batch(batch_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     """执行批量命令任务（先检查危险命令）"""
     from app.services.command_guard import check_dangerous_commands
 

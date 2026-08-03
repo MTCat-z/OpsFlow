@@ -45,12 +45,18 @@ def run_command_batch(self, batch_id: int):
                 session.commit()
         return {'error': 'dangerous commands blocked', 'reasons': guard['reasons']}
 
-    # 加载资产列表
+    # 加载资产列表（按 batch.org_id 过滤，防止跨租户执行）
     with Session(engine) as session:
         if asset_ids_str and asset_ids_str.strip():
             ids = [int(x.strip()) for x in asset_ids_str.split(',') if x.strip().isdigit()]
             if ids:
-                assets = session.exec(select(Asset).where(Asset.id.in_(ids))).all()
+                assets = session.exec(
+                    select(Asset).where(Asset.id.in_(ids), Asset.org_id == batch.org_id)
+                ).all()
+                logger.info(
+                    'Command batch %s asset filter: requested=%d, matched=%d (org_id=%s)',
+                    batch_id, len(ids), len(assets), batch.org_id,
+                )
             else:
                 assets = []
         else:

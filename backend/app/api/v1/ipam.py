@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, col, func, select
 
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access, require_org_admin
+from app.models.user import User
 from app.models.ipam import IpamAddress, IpamAddressCreate, IpamAddressRead, IpamAddressUpdate, IpamSubnet, IpamSubnetCreate, IpamSubnetRead, IpamSubnetUpdate
 
 router = APIRouter()
@@ -56,9 +57,9 @@ def create_subnet(data: IpamSubnetCreate, session: Session = Depends(get_session
 
 
 @router.put("/subnets/{subnet_id}", response_model=IpamSubnetRead)
-def update_subnet(subnet_id: int, data: IpamSubnetUpdate, session: Session = Depends(get_session)):
+def update_subnet(subnet_id: int, data: IpamSubnetUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     subnet = session.get(IpamSubnet, subnet_id)
-    if not subnet:
+    if not subnet or not check_org_access(subnet, current_user):
         raise HTTPException(404, "IPAM subnet not found")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(subnet, key, value)
@@ -70,9 +71,9 @@ def update_subnet(subnet_id: int, data: IpamSubnetUpdate, session: Session = Dep
 
 
 @router.delete("/subnets/{subnet_id}", status_code=204)
-def delete_subnet(subnet_id: int, session: Session = Depends(get_session)):
+def delete_subnet(subnet_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     subnet = session.get(IpamSubnet, subnet_id)
-    if not subnet:
+    if not subnet or not check_org_access(subnet, current_user):
         raise HTTPException(404, "IPAM subnet not found")
     # 同时删除该子网下的地址
     addrs = session.exec(select(IpamAddress).where(IpamAddress.subnet_id == subnet_id)).all()
@@ -83,10 +84,10 @@ def delete_subnet(subnet_id: int, session: Session = Depends(get_session)):
 
 
 @router.post("/subnets/{subnet_id}/discover", status_code=201)
-def discover_subnet(subnet_id: int, session: Session = Depends(get_session)):
+def discover_subnet(subnet_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     """手动触发子网 IP 发现"""
     subnet = session.get(IpamSubnet, subnet_id)
-    if not subnet:
+    if not subnet or not check_org_access(subnet, current_user):
         raise HTTPException(404, "IPAM subnet not found")
 
     def _send_task():
@@ -159,9 +160,9 @@ def create_address(data: IpamAddressCreate, session: Session = Depends(get_sessi
 
 
 @router.put("/addresses/{address_id}", response_model=IpamAddressRead)
-def update_address(address_id: int, data: IpamAddressUpdate, session: Session = Depends(get_session)):
+def update_address(address_id: int, data: IpamAddressUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     address = session.get(IpamAddress, address_id)
-    if not address:
+    if not address or not check_org_access(address, current_user):
         raise HTTPException(404, "IPAM address not found")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(address, key, value)
@@ -173,9 +174,9 @@ def update_address(address_id: int, data: IpamAddressUpdate, session: Session = 
 
 
 @router.delete("/addresses/{address_id}", status_code=204)
-def delete_address(address_id: int, session: Session = Depends(get_session)):
+def delete_address(address_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     address = session.get(IpamAddress, address_id)
-    if not address:
+    if not address or not check_org_access(address, current_user):
         raise HTTPException(404, "IPAM address not found")
     session.delete(address)
     session.commit()

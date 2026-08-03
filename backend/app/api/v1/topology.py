@@ -5,7 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, col
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access, require_org_admin
+from app.models.user import User
 from app.models.topology import (
     TopologyNode, TopologyNodeCreate, TopologyNodeUpdate, TopologyNodeRead,
     TopologyEdge, TopologyEdgeCreate, TopologyEdgeRead,
@@ -57,9 +58,9 @@ def create_node(data: TopologyNodeCreate, session: Session = Depends(get_session
 
 
 @router.put('/nodes/{node_id}', response_model=TopologyNodeRead)
-def update_node(node_id: int, data: TopologyNodeUpdate, session: Session = Depends(get_session)):
+def update_node(node_id: int, data: TopologyNodeUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     node = session.get(TopologyNode, node_id)
-    if not node:
+    if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(node, k, v)
@@ -71,9 +72,9 @@ def update_node(node_id: int, data: TopologyNodeUpdate, session: Session = Depen
 
 
 @router.patch('/nodes/{node_id}/position', response_model=TopologyNodeRead)
-def update_node_position(node_id: int, data: dict, session: Session = Depends(get_session)):
+def update_node_position(node_id: int, data: dict, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     node = session.get(TopologyNode, node_id)
-    if not node:
+    if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
     if 'position_x' in data:
         node.position_x = float(data['position_x'])
@@ -87,9 +88,9 @@ def update_node_position(node_id: int, data: dict, session: Session = Depends(ge
 
 
 @router.delete('/nodes/{node_id}', status_code=204)
-def delete_node(node_id: int, session: Session = Depends(get_session)):
+def delete_node(node_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     node = session.get(TopologyNode, node_id)
-    if not node:
+    if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
     # 删除关联的边
     edges = session.exec(
@@ -106,11 +107,11 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
 # ---------- 连线管理 ----------
 
 @router.post('/edges', response_model=TopologyEdgeRead, status_code=201)
-def create_edge(data: TopologyEdgeCreate, session: Session = Depends(get_session)):
+def create_edge(data: TopologyEdgeCreate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     # 验证节点存在
     src = session.get(TopologyNode, data.source_node_id)
     tgt = session.get(TopologyNode, data.target_node_id)
-    if not src or not tgt:
+    if not src or not tgt or not check_org_access(src, current_user) or not check_org_access(tgt, current_user):
         raise HTTPException(400, '源节点或目标节点不存在')
     edge = TopologyEdge.model_validate(data, update={'is_manual': True})
     session.add(edge)
@@ -120,9 +121,9 @@ def create_edge(data: TopologyEdgeCreate, session: Session = Depends(get_session
 
 
 @router.delete('/edges/{edge_id}', status_code=204)
-def delete_edge(edge_id: int, session: Session = Depends(get_session)):
+def delete_edge(edge_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     edge = session.get(TopologyEdge, edge_id)
-    if not edge:
+    if not edge or not check_org_access(edge, current_user):
         raise HTTPException(404, '连线不存在')
     session.delete(edge)
     session.commit()
@@ -131,7 +132,7 @@ def delete_edge(edge_id: int, session: Session = Depends(get_session)):
 # ---------- 自动发现 ----------
 
 @router.post('/discover', response_model=TopologyDiscoveryTaskRead, status_code=201)
-def start_discovery(data: TopologyDiscoveryTaskCreate, session: Session = Depends(get_session)):
+def start_discovery(data: TopologyDiscoveryTaskCreate, session: Session = Depends(get_session), admin: User = Depends(require_org_admin)):
     task = TopologyDiscoveryTask.model_validate(data)
     session.add(task)
     session.commit()
@@ -166,17 +167,17 @@ def list_discovery_tasks(
 
 
 @router.get('/discover/tasks/{task_id}', response_model=TopologyDiscoveryTaskRead)
-def get_discovery_task(task_id: int, session: Session = Depends(get_session)):
+def get_discovery_task(task_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     task = session.get(TopologyDiscoveryTask, task_id)
-    if not task:
+    if not task or not check_org_access(task, current_user):
         raise HTTPException(404, '任务不存在')
     return task
 
 
 @router.delete('/discover/tasks/{task_id}', status_code=204)
-def delete_discovery_task(task_id: int, session: Session = Depends(get_session)):
+def delete_discovery_task(task_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     task = session.get(TopologyDiscoveryTask, task_id)
-    if not task:
+    if not task or not check_org_access(task, current_user):
         raise HTTPException(404, '任务不存在')
     if task.status == 'running':
         raise HTTPException(400, '运行中的任务不能删除')
@@ -203,9 +204,9 @@ def delete_discovery_task(task_id: int, session: Session = Depends(get_session))
 # ---------- 导入到资产管理 ----------
 
 @router.post('/import/{node_id}', summary='将节点导入资产管理')
-def import_node_to_asset(node_id: int, data: Optional[dict] = None, session: Session = Depends(get_session)):
+def import_node_to_asset(node_id: int, data: Optional[dict] = None, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     node = session.get(TopologyNode, node_id)
-    if not node:
+    if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
     if node.asset_id:
         raise HTTPException(400, '该节点已关联资产')
@@ -235,7 +236,7 @@ def import_node_to_asset(node_id: int, data: Optional[dict] = None, session: Ses
 
 
 @router.post('/import/batch', summary='批量导入节点到资产')
-def import_batch(data: dict, session: Session = Depends(get_session)):
+def import_batch(data: dict, session: Session = Depends(get_session), admin: User = Depends(require_org_admin)):
     node_ids = data.get('node_ids', [])
     defaults = data.get('defaults', {})
     imported = 0

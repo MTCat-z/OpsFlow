@@ -86,9 +86,11 @@ def get_credentials(asset_id: int, session: Session=Depends(get_session), _: Use
     )
 
 @router.get('/export/excel')
-def export_assets(session: Session=Depends(get_session)):
+def export_assets(session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org)):
     import openpyxl; from openpyxl.styles import Font, PatternFill
-    assets = session.exec(select(Asset)).all()
+    q = select(Asset)
+    if org_id is not None: q = q.where(Asset.org_id == org_id)
+    assets = session.exec(q).all()
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = '资产台账'
     ws.append(['ID','设备名称','IP地址','设备类型','型号','位置','负责人','操作系统','协议','端口','认证方式','状态','备注','创建时间'])
     for a in assets: ws.append([a.id,a.name,a.ip_address,a.device_type or '',a.model or '',a.location or '',a.owner or '',a.os or '',a.protocol,a.ssh_port,a.auth_type,a.status,a.notes or '',a.created_at.strftime('%Y-%m-%d')])

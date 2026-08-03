@@ -29,11 +29,17 @@ def run_config_backup(self, job_id: int):
         if asset_filter and asset_filter.strip():
             ids = [int(x.strip()) for x in asset_filter.split(',') if x.strip().isdigit()]
             if ids:
-                assets = session.exec(select(Asset).where(Asset.id.in_(ids))).all()
+                assets = session.exec(
+                    select(Asset).where(Asset.id.in_(ids), Asset.org_id == job.org_id)
+                ).all()
             else:
-                assets = session.exec(select(Asset).where(Asset.status == 'active')).all()
+                assets = session.exec(
+                    select(Asset).where(Asset.status == 'active', Asset.org_id == job.org_id)
+                ).all()
         else:
-            assets = session.exec(select(Asset).where(Asset.status == 'active')).all()
+            assets = session.exec(
+                select(Asset).where(Asset.status == 'active', Asset.org_id == job.org_id)
+            ).all()
 
     if not assets:
         return {'error': '无匹配的资产', 'job_id': job_id}

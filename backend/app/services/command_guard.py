@@ -20,6 +20,18 @@ DANGEROUS_PATTERNS = [
     (r'\bcopy\s+.*\s+running-config\b', '覆盖运行配置'),
     (r'\breset\s+saved-configuration\b', '清除保存配置'),
     (r'\bdelete\s+flash:', '删除闪存文件'),
+    (r'\brm\b', '删除命令 (rm)'),
+    (r'\bcurl\b', '网络请求命令 (curl)'),
+    (r'\bwget\b', '下载命令 (wget)'),
+    (r'\bbash\b', 'Shell 调用 (bash)'),
+    (r'\bsh\b', 'Shell 调用 (sh)'),
+    (r'\bpython\b', 'Python 调用 (python)'),
+    (r'\bnc\b', 'Netcat 命令 (nc)'),
+    (r'/dev/tcp', 'Bash TCP 重定向 (/dev/tcp)'),
+    (r'(>|>>)\s', '输出重定向符'),
+    (r'<<\s', 'Here文档重定向符'),
+    (r'`[^`]+`', '反引号命令替换'),
+    (r'\$\(', '命令替换 $(...)'),
 ]
 
 _compiled_patterns = [(re.compile(p, re.IGNORECASE), desc) for p, desc in DANGEROUS_PATTERNS]

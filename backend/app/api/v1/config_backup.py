@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, col, func, select
 
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access, require_org_admin
+from app.models.user import User
 from app.models.config_backup import (
     ConfigBackupJob,
     ConfigBackupJobCreate,
@@ -43,7 +44,7 @@ def list_jobs(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), o
 
 
 @router.post("/jobs", response_model=ConfigBackupJobRead, status_code=201)
-def create_job(data: ConfigBackupJobCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
+def create_job(data: ConfigBackupJobCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org), admin: User = Depends(require_org_admin)):
     job = ConfigBackupJob.model_validate(data)
     job.org_id = org_id
     session.add(job)
@@ -53,9 +54,9 @@ def create_job(data: ConfigBackupJobCreate, session: Session = Depends(get_sessi
 
 
 @router.put("/jobs/{job_id}", response_model=ConfigBackupJobRead)
-def update_job(job_id: int, data: ConfigBackupJobUpdate, session: Session = Depends(get_session)):
+def update_job(job_id: int, data: ConfigBackupJobUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     job = session.get(ConfigBackupJob, job_id)
-    if not job:
+    if not job or not check_org_access(job, current_user):
         raise HTTPException(404, "config backup job not found")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(job, key, value)
@@ -67,20 +68,25 @@ def update_job(job_id: int, data: ConfigBackupJobUpdate, session: Session = Depe
 
 
 @router.delete("/jobs/{job_id}", status_code=204)
-def delete_job(job_id: int, session: Session = Depends(get_session)):
+def delete_job(job_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     job = session.get(ConfigBackupJob, job_id)
-    if not job:
+    if not job or not check_org_access(job, current_user):
         raise HTTPException(404, "config backup job not found")
     session.delete(job)
     session.commit()
 
 
 @router.post("/jobs/{job_id}/run", status_code=201)
-def run_job(job_id: int, session: Session = Depends(get_session)):
+def run_job(job_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     """手动触发配置备份任务"""
     job = session.get(ConfigBackupJob, job_id)
-    if not job:
+    if not job or not check_org_access(job, current_user):
         raise HTTPException(404, "config backup job not found")
+
+    from app.services.command_guard import check_dangerous_commands
+    guard = check_dangerous_commands(job.command or '')
+    if not guard['safe']:
+        raise HTTPException(400, f"命令包含危险操作: {'; '.join(guard['reasons'][:3])}")
 
     def _send_task():
         try:
@@ -120,18 +126,18 @@ def list_snapshots(
 
 
 @router.get("/snapshots/{snapshot_id}", response_model=ConfigSnapshotRead)
-def get_snapshot(snapshot_id: int, session: Session = Depends(get_session)):
+def get_snapshot(snapshot_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     snapshot = session.get(ConfigSnapshot, snapshot_id)
-    if not snapshot:
+    if not snapshot or not check_org_access(snapshot, current_user):
         raise HTTPException(404, "config snapshot not found")
     return snapshot
 
 
 @router.get("/snapshots/{snapshot_id}/diff")
-def get_snapshot_diff(snapshot_id: int, session: Session = Depends(get_session)):
+def get_snapshot_diff(snapshot_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     """获取快照与上一版本的差异"""
     snapshot = session.get(ConfigSnapshot, snapshot_id)
-    if not snapshot:
+    if not snapshot or not check_org_access(snapshot, current_user):
         raise HTTPException(404, "config snapshot not found")
 
     # 查找同资产的上一份快照

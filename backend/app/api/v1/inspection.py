@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func
 
 from app.core.database import get_session
-from app.core.auth import get_current_org
+from app.core.auth import get_current_org, get_current_user, check_org_access, require_org_admin
+from app.models.user import User
 from app.models.inspection import (
     InspectionPlan,
     InspectionPlanCreate,
@@ -59,17 +60,17 @@ def create_plan(data: InspectionPlanCreate, session: Session = Depends(get_sessi
 
 
 @router.get("/plans/{plan_id}", response_model=InspectionPlanRead)
-def get_plan(plan_id: int, session: Session = Depends(get_session)):
+def get_plan(plan_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     plan = session.get(InspectionPlan, plan_id)
-    if not plan:
+    if not plan or not check_org_access(plan, current_user):
         raise HTTPException(404, "inspection plan not found")
     return plan
 
 
 @router.put("/plans/{plan_id}", response_model=InspectionPlanRead)
-def update_plan(plan_id: int, data: InspectionPlanUpdate, session: Session = Depends(get_session)):
+def update_plan(plan_id: int, data: InspectionPlanUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     plan = session.get(InspectionPlan, plan_id)
-    if not plan:
+    if not plan or not check_org_access(plan, current_user):
         raise HTTPException(404, "inspection plan not found")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(plan, key, value)
@@ -81,19 +82,19 @@ def update_plan(plan_id: int, data: InspectionPlanUpdate, session: Session = Dep
 
 
 @router.delete("/plans/{plan_id}", status_code=204)
-def delete_plan(plan_id: int, session: Session = Depends(get_session)):
+def delete_plan(plan_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     plan = session.get(InspectionPlan, plan_id)
-    if not plan:
+    if not plan or not check_org_access(plan, current_user):
         raise HTTPException(404, "inspection plan not found")
     session.delete(plan)
     session.commit()
 
 
 @router.post("/plans/{plan_id}/run", response_model=InspectionRunRead, status_code=201)
-def run_plan(plan_id: int, session: Session = Depends(get_session)):
+def run_plan(plan_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     """手动触发巡检方案执行"""
     plan = session.get(InspectionPlan, plan_id)
-    if not plan:
+    if not plan or not check_org_access(plan, current_user):
         raise HTTPException(404, "inspection plan not found")
     run = InspectionRun(plan_id=plan.id, status="pending")
     session.add(run)
@@ -134,8 +135,8 @@ def list_runs(
 
 
 @router.get("/runs/{run_id}", response_model=InspectionRunRead)
-def get_run(run_id: int, session: Session = Depends(get_session)):
+def get_run(run_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     run = session.get(InspectionRun, run_id)
-    if not run:
+    if not run or not check_org_access(run, current_user):
         raise HTTPException(404, "inspection run not found")
     return run

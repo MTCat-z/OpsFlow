@@ -237,21 +237,82 @@ def download_probe_config(
     server_public_ip = get_central_public_ip() or '<SERVER_PUBLIC_IP>'
     tunnel_ip = org.wg_tunnel_ip or ''
 
-    docker_compose = '''version: "3.8"
-services:
+    docker_compose = '''services:
   opsflow-probe:
-    image: opsflow/probe:latest
+    build: .
     container_name: opsflow-probe
     restart: unless-stopped
     env_file: .env
     network_mode: "host"
     cap_add:
       - NET_ADMIN
-    sysctls:
-      - net.ipv4.ip_forward=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
     volumes:
-      - ./wg0.conf:/etc/wireguard/wg0.conf
+      - ./wg0.conf:/etc/wireguard/wg0.conf:ro
 '''
+
+    dockerfile = '''FROM python:3.12-slim
+
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+
+RUN apt-get update && apt-get install -y --no-install-recommends \\
+    nmap \\
+    iperf3 \\
+    iputils-ping \\
+    wireguard-tools \\
+    wireguard-go \\
+    curl \\
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir httpx python-nmap -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+WORKDIR /app
+
+COPY agent.py /app/agent.py
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+'''
+
+    entrypoint_sh = '''#!/bin/bash
+set -e
+
+echo "[Probe] OpsFlow 探针启动中..."
+
+if [ -z "$PROBE_KEY" ] || [ -z "$ORG_CODE" ]; then
+    echo "[ERROR] 缺少 PROBE_KEY 或 ORG_CODE"
+    exit 1
+fi
+
+if [ -f /etc/wireguard/wg0.conf ]; then
+    echo "[VPN] 启动 WireGuard..."
+    wg-quick up /etc/wireguard/wg0.conf 2>/dev/null || {
+        echo "[VPN] wg-quick 失败，尝试 wireguard-go..."
+        wireguard-go wg0 2>/dev/null && wg setconf wg0 /etc/wireguard/wg0.conf
+    }
+    echo "[VPN] 等待隧道连通..."
+    for i in $(seq 1 10); do
+        if ping -c 1 -W 2 10.99.0.1 >/dev/null 2>&1; then
+            echo "[VPN] WireGuard 已连接"
+            break
+        fi
+        sleep 2
+    done
+fi
+
+echo "[Probe] 启动 Agent..."
+exec python /app/agent.py
+'''
+
+    # 读取探针 agent.py 源码
+    import os
+    agent_path = os.path.join(os.path.dirname(__file__), '..', '..', 'app', 'probe', 'agent.py')
+    agent_code = ''
+    if os.path.exists(agent_path):
+        with open(agent_path, 'r', encoding='utf-8') as f:
+            agent_code = f.read()
 
     env_content = f'''# OpsFlow 探针配置
 OPSFLOW_URL={opsflow_url}
@@ -280,25 +341,31 @@ PersistentKeepalive = 25
 
 1. 安装 Docker 和 Docker Compose
 2. 将本目录下所有文件放到探针服务器
-3. 启动探针：
+3. 构建并启动探针：
    ```
-   docker-compose up -d
+   docker compose up -d --build
    ```
 4. 查看日志：
    ```
-   docker-compose logs -f
+   docker compose logs -f
    ```
 
 ## 文件说明
 
 - `docker-compose.yml` - 探针容器编排
-- `.env` - 探针环境变量配置
-- `wg0.conf` - WireGuard 客户端配置
+- `Dockerfile` - 探针镜像构建文件
+- `agent.py` - 探针 Agent 程序
+- `entrypoint.sh` - 容器启动脚本
+- `.env` - 探针环境变量配置（已填好，无需修改）
+- `wg0.conf` - WireGuard VPN 配置（已填好，无需修改）
 '''
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         zf.writestr('docker-compose.yml', docker_compose)
+        zf.writestr('Dockerfile', dockerfile)
+        zf.writestr('agent.py', agent_code)
+        zf.writestr('entrypoint.sh', entrypoint_sh)
         zf.writestr('.env', env_content)
         zf.writestr('wg0.conf', wg0_conf)
         zf.writestr('README.md', readme)

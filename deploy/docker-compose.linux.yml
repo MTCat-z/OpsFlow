@@ -28,6 +28,9 @@ services:
     container_name: ops_backend
     restart: unless-stopped
     network_mode: host
+    # WireGuard peer 管理需要 NET_ADMIN 权限（host 网络模式下操作宿主机 wg0 接口）
+    cap_add:
+      - NET_ADMIN
     env_file:
       - ../backend/.env
     environment:

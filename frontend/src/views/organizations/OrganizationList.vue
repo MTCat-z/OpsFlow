@@ -52,12 +52,13 @@
         <el-table-column prop="created_at" label="创建时间" width="170">
           <template #default="{ row }">{{ row.created_at?.replace('T', ' ').substring(0, 19) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="290" fixed="right">
+        <el-table-column label="操作" width="360" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="showEdit(row)">编辑</el-button>
             <el-button size="small" type="warning" @click="generateProbe(row)">生成探针</el-button>
             <el-button size="small" type="success" @click="downloadProbeConfig(row)" :disabled="!row.probe_key">下载配置</el-button>
-            <el-button size="small" type="danger" @click="del(row)">删除</el-button>
+            <el-button size="small" type="danger" @click="clearProbe(row)" :disabled="!row.probe_key">清理探针</el-button>
+            <el-button size="small" type="danger" plain @click="del(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -241,6 +242,31 @@ async function generateProbe(row) {
     loadData()
   } catch (e) {
     ElMessage.error('生成失败: ' + (e?.response?.data?.detail || e?.message || '未知错误'))
+  }
+}
+
+async function clearProbe(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认清理「${row.name}」的探针配置？\n\n` +
+      `将执行以下操作：\n` +
+      `• 移除中心服务器的 WireGuard peer\n` +
+      `• 清空探针密钥、VPN 密钥、隧道 IP、心跳记录\n` +
+      `• 该组织回到「未配置探针」状态\n\n` +
+      `历史扫描/测速任务记录会保留。\n` +
+      `分公司探针容器需手动停止（docker compose down）。`,
+      '清理探针配置',
+      { type: 'warning', confirmButtonText: '确认清理', cancelButtonText: '取消' }
+    )
+  } catch (_e) {
+    return
+  }
+  try {
+    await organizationApi.clearProbe(row.id)
+    ElMessage.success('探针配置已清理')
+    loadData()
+  } catch (e) {
+    ElMessage.error('清理失败: ' + (e?.response?.data?.detail || e?.message || '未知错误'))
   }
 }
 

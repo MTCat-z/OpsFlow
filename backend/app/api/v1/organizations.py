@@ -221,6 +221,40 @@ def reset_probe(
     }
 
 
+@router.post('/{org_id}/clear-probe', summary='清理探针配置')
+def clear_probe(
+    org_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    user: User = Depends(require_admin),
+):
+    """彻底清理探针配置：移除 WireGuard peer，清空 probe_key/WG 密钥/隧道 IP/心跳。
+    历史扫描/测速任务记录保留。清理后该组织回到未配置探针状态。"""
+    org = session.get(Organization, org_id)
+    if not org:
+        raise HTTPException(404, '组织不存在')
+    try:
+        # 移除 WireGuard peer
+        if org.wg_public_key:
+            remove_peer(org.wg_public_key)
+        # 清空所有探针相关字段
+        org.probe_key = None
+        org.wg_private_key = None
+        org.wg_public_key = None
+        org.wg_tunnel_ip = None
+        org.probe_last_heartbeat = None
+        org.updated_at = datetime.utcnow()
+        session.add(org)
+        session.commit()
+        session.refresh(org)
+        audit(request, 'clear', 'organization', org.id, f'清理探针配置: {org.name}', session)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f'清理探针配置失败: {e}')
+    return {'success': True, 'org_id': org.id}
+
+
 @router.get('/{org_id}/probe-config', summary='下载探针配置包')
 def download_probe_config(
     org_id: int,

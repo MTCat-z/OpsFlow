@@ -88,6 +88,7 @@ export const organizationApi = {
   all: () => request.get('/organizations/all'),
   generateProbe: (id) => request.post('/organizations/' + id + '/generate-probe'),
   resetProbe: (id) => request.post('/organizations/' + id + '/reset-probe'),
+  clearProbe: (id) => request.post('/organizations/' + id + '/clear-probe'),
   downloadProbeConfig: (id) => request.get('/organizations/' + id + '/probe-config', { responseType: 'blob' }),
 }
 

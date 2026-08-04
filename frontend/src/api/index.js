@@ -45,6 +45,7 @@ export const iperfApi = {
   list: (p) => request.get('/iperf/tasks', { params: p }),
   get: (id) => request.get('/iperf/tasks/' + id),
   delete: (id) => request.delete('/iperf/tasks/' + id),
+  targets: () => request.get('/probes/targets'),
 }
 
 // 网络诊断

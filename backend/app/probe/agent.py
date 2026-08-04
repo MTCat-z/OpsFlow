@@ -12,7 +12,7 @@ import httpx
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger('probe')
 
-OPSFLOW_URL = os.getenv('OPSFLOW_URL', 'http://10.99.0.1:8000')
+OPSFLOW_URL = os.getenv('OPSFLOW_URL', 'http://10.99.0.1:8000/api/v1')
 PROBE_KEY = os.getenv('PROBE_KEY', '')
 ORG_CODE = os.getenv('ORG_CODE', '')
 POLL_INTERVAL = int(os.getenv('POLL_INTERVAL', '10'))

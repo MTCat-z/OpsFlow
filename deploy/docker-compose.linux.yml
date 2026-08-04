@@ -40,7 +40,7 @@ services:
     depends_on:
       - redis
 
-  # Celery Worker — 执行异步扫描/测速任务
+  # Celery Worker — 执行定时/异步任务（扫描测速已由探针执行）
   celery_worker:
     build:
       context: ../backend
@@ -54,7 +54,7 @@ services:
       REDIS_URL: redis://127.0.0.1:6379/0
       CELERY_BROKER_URL: redis://127.0.0.1:6379/0
       CELERY_RESULT_BACKEND: redis://127.0.0.1:6379/1
-    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=4 -Q default,scan,iperf,topology,inspection,config_backup,commands,ipam
+    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=4 -Q default,topology,inspection,config_backup,commands,ipam
     volumes:
       - ../backend:/app
       - db_data:/app/data
@@ -92,6 +92,18 @@ services:
     network_mode: host
     volumes:
       - ./nginx.linux.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+
+  # iperf3 服务端 — 中心节点，供探针测速（监听 5201，VPN 隧道 IP 可达）
+  iperf3_server:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: ops_iperf3
+    restart: unless-stopped
+    network_mode: host
+    command: iperf3 -s -D && sleep infinity
     depends_on:
       - backend
 

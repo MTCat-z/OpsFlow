@@ -72,16 +72,16 @@
 | 前端路由 + 侧栏菜单 | 已完成 | /organizations 路由，admin 可见 |
 | 用户管理增强 | 已完成 | 创建用户时选择组织，列表显示组织列 |
 
-### 第 3 期：分布式探针 -- 待开始（等 VPN 打通）
+### 第 3 期：分布式探针 -- 已完成
 
 | 任务 | 状态 | 说明 |
 |------|------|------|
-| 探针认证 API（probes.py） | 待开始 | 拉取任务/回传结果/心跳 |
-| 任务路由改造 | 待开始 | scan/iperf 不再调 Celery，等待探针拉取 |
-| 探针 Agent（agent.py） | 待开始 | 纯 Python 轮询 + 本地执行 nmap/iperf3 |
-| 超时处理 | 待开始 | 30 分钟超时标记 failed，5 分钟无心跳标记离线 |
-| 探针部署包 | 待开始 | Docker Compose + Dockerfile + README |
-| VPN 打通 | 进行中 | WireGuard 站点到站点，信息中心 <-> 各分公司 |
+| 探针认证 API（probes.py） | 已完成 | 拉取任务/回传结果/心跳，按 org_id 过滤 |
+| 任务路由改造 | 已完成 | scan/iperf 不再调 Celery，等待探针拉取；admin 须指定目标 org_id，无探针则拒绝 |
+| 探针 Agent（agent.py） | 已完成 | 纯 Python 轮询 + 本地执行 nmap/iperf3 |
+| 超时处理 | 已完成 | Celery beat 每 5 分钟检查，pending/running 超 30 分钟标记 failed |
+| 探针部署包 | 已完成 | Docker Compose + Dockerfile + entrypoint.sh + SOP 文档 |
+| VPN 打通 | 已完成 | WireGuard road warrior 模式，探针自带客户端，中心服务器 NAT 端口转发 |
 
 ### 第 4 期：前端增强 -- 待开始
 

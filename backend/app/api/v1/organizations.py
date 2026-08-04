@@ -18,8 +18,11 @@ from app.services.wireguard_service import (
     generate_probe_key, generate_wireguard_keypair,
     allocate_tunnel_ip, add_peer, remove_peer,
     get_server_public_key, get_central_public_ip,
-    WG_TUNNEL_NETWORK, WG_LISTEN_PORT,
+    WG_TUNNEL_NETWORK, WG_LISTEN_PORT, WG_SERVER_TUNNEL_IP,
 )
+
+# 后端监听端口（与 docker-compose 中一致）
+WG_BACKEND_PORT = 8000
 
 router = APIRouter(prefix='/organizations', tags=['组织管理'])
 
@@ -232,10 +235,11 @@ def download_probe_config(
     if not org.probe_key or not org.wg_private_key:
         raise HTTPException(400, '请先生成探针配置')
 
-    opsflow_url = f'{request.url.scheme}://{request.url.netloc}/api/v1'
     server_public_key = get_server_public_key() or '<SERVER_PUBLIC_KEY>'
     server_public_ip = get_central_public_ip() or '<SERVER_PUBLIC_IP>'
     tunnel_ip = org.wg_tunnel_ip or ''
+    # 探针通过 WireGuard 隧道访问后端，固定使用隧道 IP，避免公网端口未转发导致连不上
+    opsflow_url = f'http://{WG_SERVER_TUNNEL_IP}:{WG_BACKEND_PORT}/api/v1'
 
     docker_compose = '''services:
   opsflow-probe:
@@ -286,33 +290,43 @@ if [ -z "$PROBE_KEY" ] || [ -z "$ORG_CODE" ]; then
     exit 1
 fi
 
-if [ -f /etc/wireguard/wg0.conf ]; then
-    echo "[VPN] 启动 WireGuard..."
-    wg-quick up /etc/wireguard/wg0.conf 2>/dev/null || {
-        echo "[VPN] wg-quick 失败，尝试 wireguard-go..."
-        wireguard-go wg0 2>/dev/null && wg setconf wg0 /etc/wireguard/wg0.conf
-    }
-    echo "[VPN] 等待隧道连通..."
-    for i in $(seq 1 10); do
-        if ping -c 1 -W 2 10.99.0.1 >/dev/null 2>&1; then
-            echo "[VPN] WireGuard 已连接"
-            break
-        fi
-        sleep 2
-    done
+# 检测隧道是否已连通（宿主机已运行 WireGuard 的情况，容器用 host 网络共享）
+if ping -c 1 -W 2 10.99.0.1 >/dev/null 2>&1; then
+    echo "[VPN] 隧道已连通（宿主机 WireGuard），跳过容器内 VPN 启动"
+else
+    echo "[VPN] 隧道未连通，尝试在容器内启动 WireGuard..."
+    if [ -f /etc/wireguard/wg0.conf ]; then
+        wg-quick up /etc/wireguard/wg0.conf 2>/dev/null || {
+            echo "[VPN] wg-quick 失败，尝试 wireguard-go..."
+            wireguard-go wg0 2>/dev/null && wg setconf wg0 /etc/wireguard/wg0.conf
+        }
+        echo "[VPN] 等待隧道连通..."
+        for i in $(seq 1 10); do
+            if ping -c 1 -W 2 10.99.0.1 >/dev/null 2>&1; then
+                echo "[VPN] WireGuard 已连接"
+                break
+            fi
+            sleep 2
+        done
+    fi
 fi
+
+echo "[iperf3] 启动服务端守护进程..."
+iperf3 -s -D 2>/dev/null || echo "[iperf3] 服务端启动失败（仅影响被测速能力）"
 
 echo "[Probe] 启动 Agent..."
 exec python /app/agent.py
 '''
 
-    # 读取探针 agent.py 源码
+    # 读取探针 agent.py 源码（路径: backend/app/probe/agent.py）
     import os
-    agent_path = os.path.join(os.path.dirname(__file__), '..', '..', 'app', 'probe', 'agent.py')
+    agent_path = os.path.join(os.path.dirname(__file__), '..', '..', 'probe', 'agent.py')
     agent_code = ''
     if os.path.exists(agent_path):
         with open(agent_path, 'r', encoding='utf-8') as f:
             agent_code = f.read()
+    if not agent_code:
+        raise HTTPException(500, '探针 agent.py 源码未找到，请检查 backend/app/probe/agent.py 是否存在')
 
     env_content = f'''# OpsFlow 探针配置
 OPSFLOW_URL={opsflow_url}

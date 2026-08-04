@@ -5,30 +5,51 @@ from app.core.database import get_session
 import re
 from app.core.auth import get_current_org, get_current_user, check_org_access
 from app.models.user import User
+from app.models.organization import Organization
 from app.models.scan_task import ScanTask, ScanTaskCreate, ScanTaskRead, ScanTaskResult
-from app.tasks.scan_tasks import run_nmap_scan
 
 router = APIRouter()
 
+
+def _resolve_org_id(session: Session, current_user: User, requested_org_id: Optional[int]) -> int:
+    """确定任务归属的组织：
+    - 普通用户：强制使用自己的 org_id，忽略请求参数
+    - admin：必须显式指定 org_id（方案 A：admin 跨组织下发任务）"""
+    if current_user.role == 'admin':
+        if not requested_org_id:
+            raise HTTPException(400, '管理员请选择目标组织')
+        org = session.get(Organization, requested_org_id)
+        if not org or not org.is_active:
+            raise HTTPException(400, '目标组织不存在或已禁用')
+        return requested_org_id
+    if current_user.org_id is None:
+        raise HTTPException(400, '当前用户未隶属任何组织')
+    return current_user.org_id
+
+
+def _ensure_probe_ready(session: Session, org_id: int):
+    """探针守卫：无探针则拒绝创建任务（ADR-0003 第 5 条：无探针则拒绝）"""
+    org = session.get(Organization, org_id)
+    if not org or not org.probe_key:
+        raise HTTPException(400, '该组织未配置探针，请先在组织管理生成探针')
+
+
 @router.post('/start', response_model=ScanTaskRead, status_code=201)
-def start_scan(task_in: ScanTaskCreate, session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org)):
+def start_scan(
+    task_in: ScanTaskCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
     if task_in.ports and not re.match(r'^[\d,\-]+$', task_in.ports):
         raise HTTPException(400, 'ports 字段仅允许数字、逗号、短横线')
+    org_id = _resolve_org_id(session, current_user, task_in.org_id)
+    _ensure_probe_ready(session, org_id)
     task = ScanTask.model_validate(task_in)
     task.org_id = org_id
-    session.add(task); session.commit(); session.refresh(task)
-    def _send_task():
-        """在线程中发送 Celery 任务，避免阻塞主线程"""
-        try:
-            from app.tasks.worker import celery_app
-            celery_app.send_task('app.tasks.scan_tasks.run_nmap_scan', args=[task.id], countdown=2)
-        except Exception:
-            pass
-    import threading
-    threading.Thread(target=_send_task, daemon=True).start()
-    task.status = 'pending'
+    task.status = 'pending'  # 等待探针拉取，不再调用 Celery
     session.add(task); session.commit(); session.refresh(task)
     return ScanTaskRead.model_validate(task)
+
 
 @router.get('/tasks', response_model=dict)
 def list_tasks(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), status: Optional[str]=None, org_id: Optional[int]=Depends(get_current_org), session: Session=Depends(get_session)):
@@ -49,9 +70,5 @@ def get_task(task_id: int, session: Session=Depends(get_session), current_user: 
 def delete_task(task_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
     task = session.get(ScanTask, task_id)
     if not task or not check_org_access(task, current_user): raise HTTPException(404, '任务不存在')
-    if task.celery_task_id and task.status in ('pending','running'):
-        try:
-            from app.tasks.worker import celery_app
-            celery_app.control.revoke(task.celery_task_id, terminate=True)
-        except: pass
+    # 探针模式：任务由探针执行，删除时无需撤销 Celery
     session.delete(task); session.commit()

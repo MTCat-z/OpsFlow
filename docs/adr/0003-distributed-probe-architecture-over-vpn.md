@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Amended)
+Accepted (Implemented)
 
 ## Context
 
@@ -36,8 +36,12 @@ Adopt a distributed probe architecture with WireGuard VPN, where probes carry th
 ## Consequences
 
 - The probe Docker image must include WireGuard tools and kernel module access (`--cap-add NET_ADMIN`).
-- The central server must have a public IP and run WireGuard server, accepting connections on UDP 51820.
+- The central server must have a public IP and run WireGuard server, accepting connections on UDP 51820. If the central server sits behind NAT, the upstream gateway must forward UDP 51820 to it (TCP port forwarding is not sufficient — WireGuard handshake packets will not arrive).
 - Each probe needs its own WireGuard key pair and a tunnel IP assignment. The central server maintains a list of peer public keys.
 - The single-machine deployment includes a local probe that connects to the local WireGuard server (or skips VPN if co-located).
 - Network topology requires non-overlapping subnet planning across all sites.
 - If a branch firewall blocks UDP 51820, the probe cannot connect. Mitigation: document the requirement, or use udp2raw to wrap WireGuard in TCP.
+- The probe's `OPSFLOW_URL` must point to the central server's VPN tunnel IP (e.g. `http://10.99.0.1:8000/api/v1`), not the public IP, because the public IP typically only forwards UDP 51820 and does not expose the backend HTTP port.
+- Scan/iperf task creation APIs no longer dispatch Celery tasks. The `celery_app.send_task(...)` calls were removed from `scan.py` and `iperf.py`; tasks stay `pending` until a probe polls them. The central Celery worker must not consume the `scan` and `iperf` queues.
+- Admin-created tasks require an explicit `org_id` (target organization). A non-admin user's task is bound to their own organization. Both paths reject task creation if the target organization has no probe configured (`probe_key` missing).
+- Probe deployment should prefer host-level WireGuard (the probe container shares the host network via `network_mode: host`). Running WireGuard both on the host and inside the container causes `Failed to create TUN device` conflicts; the probe entrypoint detects an already-connected tunnel and skips in-container VPN startup.

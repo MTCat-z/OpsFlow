@@ -11,12 +11,15 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response
 from sqlmodel import Session, select
 
 from app.core.database import get_session
+from app.core.auth import get_current_user
+from app.models.user import User
 from app.models.organization import Organization
 from app.models.scan_task import ScanTask
 from app.models.iperf_task import IperfTask
 from app.services.wireguard_service import (
     generate_probe_key, generate_wireguard_keypair,
     allocate_tunnel_ip, add_peer, remove_peer, get_server_public_key,
+    WG_SERVER_TUNNEL_IP,
 )
 
 router = APIRouter(prefix='/probes', tags=['探针'])
@@ -142,3 +145,41 @@ def probe_heartbeat(
     session.add(org)
     session.commit()
     return {'success': True, 'server_time': datetime.utcnow().isoformat()}
+
+
+@router.get('/targets', summary='可用测速目标（中心 + 各在线探针）')
+def list_iperf_targets(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """供前端创建测速任务时选择 iperf3 服务端目标：
+    - 中心服务器（隧道 IP，常驻 iperf3 服务端）
+    - 各在线探针（兼作 iperf3 服务端，仅在线时可测）"""
+    now = datetime.utcnow()
+    targets = [{
+        'type': 'central',
+        'name': '中心服务器',
+        'host': WG_SERVER_TUNNEL_IP,
+        'port': 5201,
+        'online': True,
+    }]
+    orgs = session.exec(
+        select(Organization).where(Organization.probe_key.isnot(None))
+    ).all()
+    for o in orgs:
+        if not o.wg_tunnel_ip:
+            continue
+        online = bool(
+            o.probe_last_heartbeat
+            and (now - o.probe_last_heartbeat).total_seconds() <= 300
+        )
+        targets.append({
+            'type': 'probe',
+            'org_id': o.id,
+            'name': o.name,
+            'code': o.code,
+            'host': o.wg_tunnel_ip,
+            'port': 5201,
+            'online': online,
+        })
+    return {'targets': targets}

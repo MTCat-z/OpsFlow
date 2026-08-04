@@ -7,14 +7,13 @@ celery_app = Celery(
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
-        'app.tasks.scan_tasks',
-        'app.tasks.iperf_tasks',
         'app.tasks.broadband_tasks',
         'app.tasks.topology_tasks',
         'app.tasks.inspection_tasks',
         'app.tasks.config_backup_tasks',
         'app.tasks.command_tasks',
         'app.tasks.ipam_tasks',
+        'app.tasks.probe_tasks',
     ],
 )
 
@@ -33,14 +32,13 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_acks_late=True,
     task_routes={
-        'app.tasks.scan_tasks.*': {'queue': 'scan'},
-        'app.tasks.iperf_tasks.*': {'queue': 'iperf'},
         'app.tasks.broadband_tasks.*': {'queue': 'default'},
         'app.tasks.topology_tasks.*': {'queue': 'topology'},
         'app.tasks.inspection_tasks.*': {'queue': 'inspection'},
         'app.tasks.config_backup_tasks.*': {'queue': 'config_backup'},
         'app.tasks.command_tasks.*': {'queue': 'commands'},
         'app.tasks.ipam_tasks.*': {'queue': 'ipam'},
+        'app.tasks.probe_tasks.*': {'queue': 'default'},
     },
     task_default_queue='default',
     beat_schedule={
@@ -59,6 +57,10 @@ celery_app.conf.update(
         'discover-ipam-subnets-periodic': {
             'task': 'app.tasks.ipam_tasks.discover_all_subnets',
             'schedule': crontab(minute=0, hour='*/4'),
+        },
+        'check-probe-task-timeout': {
+            'task': 'app.tasks.probe_tasks.check_probe_task_timeout',
+            'schedule': crontab(minute='*/5'),
         },
     },
 )

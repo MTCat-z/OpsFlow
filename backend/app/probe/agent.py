@@ -126,7 +126,7 @@ def poll_tasks():
     """从中心拉取待执行任务"""
     try:
         resp = httpx.get(
-            f'{OPSFLOW_URL}/api/v1/probes/tasks',
+            f'{OPSFLOW_URL}/probes/tasks',
             headers=HEADERS,
             timeout=30,
         )
@@ -144,7 +144,7 @@ def submit_result(task_type, task_id, result):
     """回传任务结果"""
     try:
         resp = httpx.post(
-            f'{OPSFLOW_URL}/api/v1/probes/tasks/{task_type}/{task_id}/result',
+            f'{OPSFLOW_URL}/probes/tasks/{task_type}/{task_id}/result',
             headers=HEADERS,
             json=result,
             timeout=30,
@@ -161,7 +161,7 @@ def send_heartbeat():
     """发送心跳"""
     try:
         resp = httpx.post(
-            f'{OPSFLOW_URL}/api/v1/probes/heartbeat',
+            f'{OPSFLOW_URL}/probes/heartbeat',
             headers=HEADERS,
             timeout=10,
         )

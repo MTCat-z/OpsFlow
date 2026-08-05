@@ -31,6 +31,8 @@ def _migrate_columns():
             ('wg_public_key', 'VARCHAR(200)'),
             ('wg_tunnel_ip', 'VARCHAR(50)'),
             ('probe_last_heartbeat', 'TIMESTAMP'),
+            ('zabbix_url', 'VARCHAR(500)'),
+            ('zabbix_api_token', 'VARCHAR(200)'),
         ],
         'assets': [
             ('ssh_private_key_encrypted', 'VARCHAR'),

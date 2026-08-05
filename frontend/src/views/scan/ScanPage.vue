@@ -50,7 +50,20 @@ async function loadTasks(){
   if(isFirstLoad.value){loading.value=true;isFirstLoad.value=false}
   try{const r=await scanApi.list({size:50});tasks.value=r.items||[]}catch(e){console.error('加载扫描任务失败',e)}finally{loading.value=false}
 }
-async function startScan(){await formRef.value.validate();submitting.value=true;try{await scanApi.start(form);ElMessage.success('扫描任务已提交，等待探针执行');loadTasks()}finally{submitting.value=false}}
+async function checkProbeBeforeSubmit(){
+  try{
+    const r=await organizationApi.all()
+    const list=Array.isArray(r)?r:(r.items||[])
+    const targetOrg=isAdmin?list.find(o=>o.id===form.org_id):list[0]
+    if(!targetOrg||targetOrg.probe_online===false){
+      try{
+        await ElMessageBox.confirm('目标组织探针离线，任务可能超时（30分钟后自动标记失败），是否继续？','探针离线警告',{type:'warning',confirmButtonText:'继续',cancelButtonText:'取消'})
+      }catch{return false}
+    }
+    return true
+  }catch(e){console.error('探针状态检测失败',e);return true}
+}
+async function startScan(){await formRef.value.validate();if(!(await checkProbeBeforeSubmit()))return;submitting.value=true;try{await scanApi.start(form);ElMessage.success('扫描任务已提交，等待探针执行');loadTasks()}finally{submitting.value=false}}
 async function viewResult(row){const r=await scanApi.get(row.id);curTask.value=r;resultHosts.value=r.result_json?JSON.parse(r.result_json).hosts??[]:[]; resultDlg.value=true}
 async function delTask(row){await ElMessageBox.confirm('确定删除?','确认',{type:'warning'});await scanApi.delete(row.id);ElMessage.success('已删除');loadTasks()}
 onMounted(()=>{if(isAdmin){loadOrgs()};loadTasks();pollTimer=setInterval(loadTasks,5000)})

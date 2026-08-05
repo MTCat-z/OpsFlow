@@ -88,7 +88,20 @@ function onPublicSelect(host){
   }
 }
 async function loadTasks(){if(isFirstLoad.value){loading.value=true;isFirstLoad.value=false};try{const r=await iperfApi.list({size:50});tasks.value=r.items}finally{loading.value=false}}
-async function startIperf(){await formRef.value.validate();submitting.value=true;try{await iperfApi.start(form);ElMessage.success('测速任务已提交，等待探针执行');loadTasks()}finally{submitting.value=false}}
+async function checkProbeBeforeSubmit(){
+  try{
+    const r=await organizationApi.all()
+    const list=Array.isArray(r)?r:(r.items||[])
+    const targetOrg=isAdmin?list.find(o=>o.id===form.org_id):list[0]
+    if(!targetOrg||targetOrg.probe_online===false){
+      try{
+        await ElMessageBox.confirm('目标组织探针离线，任务可能超时（30分钟后自动标记失败），是否继续？','探针离线警告',{type:'warning',confirmButtonText:'继续',cancelButtonText:'取消'})
+      }catch{return false}
+    }
+    return true
+  }catch(e){console.error('探针状态检测失败',e);return true}
+}
+async function startIperf(){await formRef.value.validate();if(!(await checkProbeBeforeSubmit()))return;submitting.value=true;try{await iperfApi.start(form);ElMessage.success('测速任务已提交，等待探针执行');loadTasks()}finally{submitting.value=false}}
 async function viewResult(row){const r=await iperfApi.get(row.id);curTask.value=r;resultDlg.value=true;await nextTick();renderChart(r)}
 async function renderChart(task){if(!chartDom.value)return;const echarts=await import('echarts');if(!chartInstance)chartInstance=echarts.init(chartDom.value);let intervals=[];if(task.result_json){try{const d=JSON.parse(task.result_json);intervals=(d.intervals??[]).map((iv,i)=>({t:i+1,bw:((iv.sum?.bits_per_second??0)/1e6).toFixed(2)}))}catch{ /* parse optional */ }}chartInstance.setOption({tooltip:{trigger:'axis'},xAxis:{type:'category',data:intervals.map(i=>i.t),name:'时间(s)'},yAxis:{type:'value',name:'Mbps'},series:[{name:'带宽',type:'line',data:intervals.map(i=>i.bw),smooth:true,areaStyle:{opacity:0.1}}]})}
 async function delTask(row){await ElMessageBox.confirm('确定删除?','确认',{type:'warning'});await iperfApi.delete(row.id);ElMessage.success('已删除');loadTasks()}

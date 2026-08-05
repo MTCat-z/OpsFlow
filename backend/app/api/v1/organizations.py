@@ -123,9 +123,27 @@ def list_all_organizations(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
-    """获取所有活跃组织列表，用于创建用户/资产时选择"""
-    orgs = session.exec(select(Organization).where(Organization.is_active == True).order_by(Organization.name)).all()
-    return [{'id': o.id, 'name': o.name, 'code': o.code} for o in orgs]
+    """获取所有活跃组织列表，用于创建用户/资产时选择。
+    - admin: 返回所有活跃组织
+    - 普通用户: 仅返回自己所属组织（含 probe_online，供提交任务前检测探针状态）"""
+    now = datetime.utcnow()
+    q = select(Organization).where(Organization.is_active == True)
+    if user.role != 'admin':
+        if user.org_id is None:
+            return []
+        q = q.where(Organization.id == user.org_id)
+    orgs = session.exec(q.order_by(Organization.name)).all()
+    result = []
+    for o in orgs:
+        probe_online = bool(
+            o.probe_last_heartbeat
+            and (now - o.probe_last_heartbeat).total_seconds() <= 300
+        )
+        result.append({
+            'id': o.id, 'name': o.name, 'code': o.code,
+            'probe_online': probe_online,
+        })
+    return result
 
 
 @router.post('/{org_id}/generate-probe', summary='生成探针配置')

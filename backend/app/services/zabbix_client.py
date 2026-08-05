@@ -18,11 +18,18 @@ class ZabbixAPIError(Exception):
 
 
 class ZabbixClient:
-    def __init__(self):
-        self.url = settings.ZABBIX_URL
-        self.api_token = settings.ZABBIX_API_TOKEN
-        self.user = settings.ZABBIX_USER
-        self.password = settings.ZABBIX_PASSWORD
+    def __init__(
+        self,
+        url: Optional[str] = None,
+        token: Optional[str] = None,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
+        # 优先使用传入参数，未传则回退到全局 settings（保持单机版向后兼容）
+        self.url = url if url is not None else settings.ZABBIX_URL
+        self.api_token = token if token is not None else settings.ZABBIX_API_TOKEN
+        self.user = user if user is not None else settings.ZABBIX_USER
+        self.password = password if password is not None else settings.ZABBIX_PASSWORD
         self.verify_ssl = settings.ZABBIX_VERIFY_SSL
         self.timeout = settings.ZABBIX_TIMEOUT
         self._auth_token: Optional[str] = None
@@ -183,11 +190,58 @@ class ZabbixClient:
 
         return metrics
 
+    def get_items(self, host_id: str) -> list:
+        """获取指定主机的监控项列表（用于面板编辑器级联选择 item）"""
+        self._ensure_auth()
+        return self._rpc('item.get', {
+            'hostids': [host_id],
+            'output': ['itemid', 'name', 'key_'],
+            'sortfield': 'name',
+        }) or []
+
 
 _client: Optional[ZabbixClient] = None
 
 def get_zabbix_client() -> ZabbixClient:
+    """向后兼容：从全局 settings 读取配置创建单例客户端（单机版）"""
     global _client
     if _client is None:
         _client = ZabbixClient()
     return _client
+
+
+# 多组织客户端实例缓存：{org_id: ZabbixClient}
+_org_clients: dict = {}
+
+
+def get_zabbix_client_for_org(org_id: Optional[int]) -> ZabbixClient:
+    """
+    多组织工厂函数：根据 org_id 从 Organization 表读取 zabbix 配置创建客户端。
+    - org_id 为 None 时回退到单机版 get_zabbix_client()
+    - 组织未配置 zabbix_url 时抛出 ZabbixAPIError，由调用方处理为 400
+    """
+    if not org_id:
+        return get_zabbix_client()
+
+    cached = _org_clients.get(org_id)
+    if cached is not None:
+        return cached
+
+    from sqlmodel import Session
+    from app.core.database import engine
+    from app.models.organization import Organization
+
+    with Session(engine) as session:
+        org = session.get(Organization, org_id)
+        if not org:
+            raise ZabbixAPIError(-1, '组织不存在', f'org_id={org_id}')
+        if not org.zabbix_url:
+            raise ZabbixAPIError(-1, '该组织未配置 Zabbix', f'org_id={org_id}')
+        client = ZabbixClient(
+            url=org.zabbix_url,
+            token=org.zabbix_api_token,
+            user=getattr(org, 'zabbix_user', None),
+            password=getattr(org, 'zabbix_password', None),
+        )
+    _org_clients[org_id] = client
+    return client

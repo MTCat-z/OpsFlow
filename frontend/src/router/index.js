@@ -28,6 +28,7 @@ const routes = [
       { path: 'ipam', name: 'Ipam', component: () => import('@/views/ipam/IpamPage.vue'), meta: { title: 'IPAM' } },
       { path: 'users', name: 'Users', component: () => import('@/views/users/UserManagePage.vue'), meta: { title: '用户管理', admin: true } },
       { path: 'organizations', name: 'Organizations', component: () => import('@/views/organizations/OrganizationList.vue'), meta: { title: '组织管理', admin: true } },
+      { path: 'probes', name: 'ProbeStatus', component: () => import('@/views/probes/ProbeStatus.vue'), meta: { title: '探针状态', admin: true } },
       { path: 'audit', name: 'Audit', component: () => import('@/views/users/AuditLogPage.vue'), meta: { title: '审计日志', admin: true } },
     ],
   },

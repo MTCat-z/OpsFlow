@@ -175,7 +175,7 @@ async function loadBatches() {
 
 async function loadAssets() {
   try {
-    const res = await assetApi.list({ size: 200 })
+    const res = await assetApi.list({ size: 100 })
     assetOptions.value = res.items || []
   } catch { assetOptions.value = [] }
 }

@@ -117,7 +117,7 @@ async function loadData() {
     const params = {}
     if (keyword.value) params.keyword = keyword.value
     const res = await organizationApi.list(params)
-    organizations.value = res.data.items || []
+    organizations.value = res.items || []
   } catch (e) {
     ElMessage.error('加载探针状态失败')
   } finally {
@@ -139,7 +139,7 @@ async function handleReset(row) {
   } catch { return }
   try {
     const res = await organizationApi.resetProbe(row.id)
-    resetResult.value = { ...res.data, org_id: row.id, org_code: row.code }
+    resetResult.value = { ...res, org_id: row.id, org_code: row.code }
     resetDialogVisible.value = true
     ElMessage.success('探针密钥已重置')
     loadData()
@@ -164,7 +164,7 @@ async function handleClear(row) {
 async function downloadConfig(orgId) {
   try {
     const res = await organizationApi.downloadProbeConfig(orgId)
-    const blob = new Blob([res.data], { type: 'application/zip' })
+    const blob = new Blob([res], { type: 'application/zip' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

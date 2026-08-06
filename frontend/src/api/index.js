@@ -120,10 +120,21 @@ export const zabbixApi = {
   triggers: (p) => request.get('/zabbix/triggers', { params: p }),
   dashboard: () => request.get('/zabbix/dashboard'),
   clearCache: () => request.post('/zabbix/cache/clear'),
+  // 组织级联查询（面板编辑器用）
+  orgHosts: (orgId) => request.get('/organizations/' + orgId + '/zabbix/hosts'),
+  orgItems: (orgId, hostId) => request.get('/organizations/' + orgId + '/zabbix/items', { params: { host_id: hostId } }),
 }
 
 export const dashboardApi = {
   overview: () => request.get('/dashboard/overview'),
+  // 面板 CRUD + 数据查询
+  listPanels: (orgId) => request.get('/dashboard/panels', { params: { org_id: orgId } }),
+  createPanel: (orgId, d) => request.post('/dashboard/panels', d, { params: { org_id: orgId } }),
+  updatePanel: (id, d) => request.put('/dashboard/panels/' + id, d),
+  deletePanel: (id) => request.delete('/dashboard/panels/' + id),
+  saveLayout: (orgId, layout) => request.put('/dashboard/panels/layout', layout, { params: { org_id: orgId } }),
+  getPanelData: (id) => request.get('/dashboard/panels/' + id + '/data'),
+  initDefaults: (orgId) => request.post('/dashboard/panels/defaults', null, { params: { org_id: orgId } }),
 }
 
 export const inspectionApi = {

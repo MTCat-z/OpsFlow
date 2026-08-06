@@ -15,6 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  const orgId = computed(() => user.value?.org_id ?? null)
   const username = computed(() => user.value?.username || '')
   const mustChangePassword = computed(() => user.value?.must_change_password === true)
 
@@ -24,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = {
       username: res.username,
       role: res.role,
+      org_id: res.org_id,
       must_change_password: res.must_change_password,
     }
     localStorage.setItem('token', res.access_token)
@@ -47,5 +49,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { token, user, isLoggedIn, isAdmin, username, mustChangePassword, login, logout, changePassword }
+  return { token, user, isLoggedIn, isAdmin, orgId, username, mustChangePassword, login, logout, changePassword }
 })

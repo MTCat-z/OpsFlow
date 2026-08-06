@@ -1,188 +1,426 @@
 <template>
   <div class="dashboard-page">
-    <el-row :gutter="12" class="summary-grid">
-      <el-col v-for="item in cards" :key="item.label" :xs="12" :sm="8" :md="6" :lg="4">
-        <el-card shadow="never" class="summary-card">
-          <div class="summary-card__label">{{ item.label }}</div>
-          <div class="summary-card__value">{{ item.value }}</div>
-          <div class="summary-card__note">{{ item.note }}</div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <!-- 顶部工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="title">运维大屏</span>
+        <el-select v-if="auth.isAdmin" v-model="selectedOrgId" placeholder="选择组织" size="small" style="width: 200px; margin-left: 16px" @change="onOrgChange">
+          <el-option v-for="o in orgOptions" :key="o.id" :label="o.name" :value="o.id" />
+        </el-select>
+        <el-tag v-else size="small" style="margin-left: 16px">{{ currentOrgName }}</el-tag>
+      </div>
+      <div class="toolbar-right">
+        <el-switch v-model="editMode" active-text="编辑" inactive-text="" size="small" />
+        <el-button size="small" @click="loadPanels">刷新</el-button>
+        <el-button v-if="editMode" size="small" type="primary" @click="showAddPanel">添加面板</el-button>
+        <el-button v-if="editMode" size="small" @click="initDefaults">重置默认</el-button>
+      </div>
+    </div>
 
-    <el-row :gutter="16">
-      <el-col :xs="24" :lg="12">
-        <el-card shadow="never">
-          <template #header>网络与资产</template>
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="在用资产">{{ data.assets?.active || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="拓扑节点">{{ data.network_tasks?.topology_nodes || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="扫描任务">{{ data.network_tasks?.scans || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="测速任务">{{ data.network_tasks?.iperf || 0 }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :lg="12">
-        <el-card shadow="never">
-          <template #header>自动化与风险</template>
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="巡检异常">{{ data.inspection?.exceptions || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="IP 冲突">{{ data.ipam?.conflicts || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="30 天到期宽带">{{ data.broadband?.expiring_30d || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="配置快照">{{ data.automation?.config_snapshots || 0 }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="16" style="margin-top: 16px">
-      <!-- 资产类型分布 -->
-      <el-col :xs="24" :lg="8">
-        <el-card shadow="never">
-          <template #header>资产类型分布</template>
-          <div ref="chartRef" style="height: 260px" />
-        </el-card>
-      </el-col>
-
-      <!-- 宽带到期倒计时 -->
-      <el-col :xs="24" :lg="8">
-        <el-card shadow="never">
-          <template #header>宽带到期倒计时</template>
-          <el-table v-if="expiringList.length" :data="expiringList" size="small" stripe>
-            <el-table-column prop="provider" label="运营商" width="80" />
-            <el-table-column prop="circuit_id" label="线路" min-width="100" show-overflow-tooltip />
-            <el-table-column prop="next_renewal_deadline" label="续费日" width="100" />
-            <el-table-column label="剩余" width="70" align="center">
-              <template #default="{ row }">
-                <span :style="{ color: row.next_renewal_days <= 7 ? 'var(--ops-danger)' : row.next_renewal_days <= 15 ? 'var(--ops-warning)' : 'var(--ops-success)' }">{{ row.next_renewal_days }}天</span>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-else description="无即将到期的宽带" :image-size="60" />
-        </el-card>
-      </el-col>
-
-      <!-- 最近巡检 -->
-      <el-col :xs="24" :lg="8">
-        <el-card shadow="never">
-          <template #header>最近巡检</template>
-          <el-timeline v-if="recentRuns.length">
-            <el-timeline-item v-for="r in recentRuns" :key="r.id" :timestamp="r.created_at ? r.created_at.replace('T', ' ').slice(0, 16) : ''" placement="top" :type="r.status === 'completed' ? (r.exception_count > 0 ? 'warning' : 'success') : 'danger'">
-              <div style="font-size: 13px">
-                <span>{{ r.summary || r.status }}</span>
-                <el-tag v-if="r.exception_count" type="danger" size="small" style="margin-left: 4px">{{ r.exception_count }} 异常</el-tag>
+    <!-- 可拖拽面板网格 -->
+    <div v-loading="loading" class="grid-wrapper">
+      <grid-layout
+        v-model:layout="gridLayout"
+        :col-num="12"
+        :row-height="40"
+        :is-draggable="editMode"
+        :is-resizable="editMode"
+        :margin="[10, 10]"
+        :use-css-transforms="true"
+        @layout-updated="onLayoutUpdated"
+      >
+        <grid-item
+          v-for="item in gridLayout"
+          :key="item.i"
+          :x="item.x"
+          :y="item.y"
+          :w="item.w"
+          :h="item.h"
+          :static="!editMode"
+        >
+          <el-card shadow="hover" class="panel-card">
+            <template #header>
+              <div class="panel-header">
+                <span class="panel-title">{{ item.panel?.title || '未命名' }}</span>
+                <div v-if="editMode" class="panel-actions">
+                  <el-button size="small" link @click="editPanel(item)">编辑</el-button>
+                  <el-button size="small" link type="danger" @click="deletePanel(item)">删除</el-button>
+                </div>
+                <el-button v-else size="small" link @click="refreshPanel(item)">刷新</el-button>
               </div>
-            </el-timeline-item>
-          </el-timeline>
-          <el-empty v-else description="暂无巡检记录" :image-size="60" />
-        </el-card>
-      </el-col>
-    </el-row>
+            </template>
+            <div class="panel-body" :class="{ loading: item.loading }">
+              <div v-if="item.error" class="panel-error">{{ item.error }}</div>
+              <PanelRenderer
+                v-else
+                :chart-type="item.panel?.chart_type"
+                :source-type="item.panel?.source_type"
+                :data="item.data"
+              />
+            </div>
+          </el-card>
+        </grid-item>
+      </grid-layout>
+      <el-empty v-if="!loading && gridLayout.length === 0" description="暂无面板，点击「重置默认」初始化" />
+    </div>
+
+    <!-- 面板编辑器 -->
+    <el-dialog v-model="editorVisible" :title="editingPanel.id ? '编辑面板' : '添加面板'" width="640px">
+      <el-form :model="editingPanel" label-width="100px">
+        <el-form-item label="面板标题">
+          <el-input v-model="editingPanel.title" placeholder="如：出口接口流量" />
+        </el-form-item>
+        <el-form-item label="数据源">
+          <el-select v-model="editingPanel.source_type" style="width: 100%" @change="onSourceTypeChange">
+            <el-option label="Zabbix 监控项（折线图）" value="zabbix_item" />
+            <el-option label="最近测速（数值卡）" value="iperf_recent" />
+            <el-option label="最近扫描（数值卡）" value="scan_recent" />
+            <el-option label="Zabbix 告警（表格）" value="zabbix_problems" />
+            <el-option label="探针状态（数值卡）" value="probe_status" />
+          </el-select>
+        </el-form-item>
+        <template v-if="editingPanel.source_type === 'zabbix_item'">
+          <el-form-item label="Zabbix 主机">
+            <el-select v-model="editingPanelCfg.host_id" placeholder="先选择主机" filterable style="width: 100%" :loading="zbxHostLoading" @change="onHostChange">
+              <el-option v-for="h in zbxHosts" :key="h.host_id" :label="h.name" :value="h.host_id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="监控项">
+            <el-select v-model="editingPanelCfg.item_key" placeholder="先选主机再选 item" filterable style="width: 100%" :loading="zbxItemLoading" :disabled="!editingPanelCfg.host_id">
+              <el-option v-for="i in zbxItems" :key="i.key_" :label="i.name" :value="i.key_" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="时间范围">
+            <el-select v-model="editingPanelCfg.period" style="width: 100%">
+              <el-option label="最近 1 小时" value="1h" />
+              <el-option label="最近 6 小时" value="6h" />
+              <el-option label="最近 24 小时" value="24h" />
+              <el-option label="最近 7 天" value="7d" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="图表类型">
+            <el-select v-model="editingPanel.chart_type" style="width: 100%">
+              <el-option label="折线图" value="line" />
+            </el-select>
+          </el-form-item>
+        </template>
+        <el-form-item v-else-if="['iperf_recent','scan_recent','probe_status'].includes(editingPanel.source_type)" label="图表类型">
+          <el-select v-model="editingPanel.chart_type" style="width: 100%">
+            <el-option label="数值卡" value="stat" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-else-if="editingPanel.source_type === 'zabbix_problems'" label="图表类型">
+          <el-select v-model="editingPanel.chart_type" style="width: 100%">
+            <el-option label="表格" value="table" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="宽度">
+          <el-slider v-model="editingPanel.w" :min="2" :max="12" show-input />
+        </el-form-item>
+        <el-form-item label="高度">
+          <el-slider v-model="editingPanel.h" :min="2" :max="16" show-input />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editorVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="savePanel">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, nextTick } from 'vue'
-import { dashboardApi } from '@/api'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { GridLayout, GridItem } from 'vue-grid-layout'
+import { dashboardApi, organizationApi, zabbixApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import PanelRenderer from './PanelRenderer.vue'
 
-const data = ref({})
-const chartRef = ref(null)
-let chartInstance = null
-let pollTimer = null
+const auth = useAuthStore()
+const loading = ref(false)
+const editMode = ref(false)
+const panels = ref([])
+const gridLayout = ref([])
+const orgOptions = ref([])
+const selectedOrgId = ref(null)
+const editorVisible = ref(false)
+const saving = ref(false)
+const editingPanel = ref({})
+const editingPanelCfg = ref({})
+const zbxHosts = ref([])
+const zbxItems = ref([])
+const zbxHostLoading = ref(false)
+const zbxItemLoading = ref(false)
 
-const cards = computed(() => [
-  { label: '资产总数', value: data.value.assets?.total || 0, note: '纳管设备' },
-  { label: '扫描任务', value: data.value.network_tasks?.scans || 0, note: `${data.value.network_tasks?.scan_running || 0} 个运行中` },
-  { label: '宽带合同', value: data.value.broadband?.contracts || 0, note: `${data.value.broadband?.expiring_renewal_30d || 0} 个 30 天内到期` },
-  { label: '巡检方案', value: data.value.inspection?.plans || 0, note: `${data.value.inspection?.enabled_plans || 0} 个启用` },
-  { label: 'IPAM 子网', value: data.value.ipam?.subnets || 0, note: `${data.value.ipam?.addresses || 0} 个地址记录` },
-  { label: '批量命令', value: data.value.automation?.command_batches || 0, note: '执行批次' },
-])
+const effectiveOrgId = computed(() => (auth.isAdmin ? selectedOrgId.value : auth.orgId))
+const currentOrgName = computed(() => orgOptions.value.find((o) => o.id === auth.orgId)?.name || '当前组织')
 
-const expiringList = computed(() => data.value.broadband?.expiring_renewal_list || [])
-const recentRuns = computed(() => data.value.inspection?.recent_runs || [])
-
-async function loadData() {
-  data.value = await dashboardApi.overview()
-  await nextTick()
-  renderChart()
-}
-
-async function renderChart() {
-  if (!chartRef.value) return
-  const types = data.value.asset_types || {}
-  const entries = Object.entries(types)
-  if (!entries.length) return
-
+async function loadOrgOptions() {
+  if (!auth.isAdmin) return
   try {
-    const echarts = await import('echarts')
-    if (!chartInstance) {
-      chartInstance = echarts.init(chartRef.value)
+    const res = await organizationApi.all()
+    orgOptions.value = Array.isArray(res) ? res : (res.items || [])
+    if (orgOptions.value.length > 0 && !selectedOrgId.value) {
+      selectedOrgId.value = orgOptions.value[0].id
     }
-    chartInstance.setOption({
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      series: [{
-        type: 'pie',
-        radius: ['40%', '70%'],
-        label: { formatter: '{b}\n{c}' },
-        data: entries.map(([name, value]) => ({ name, value })),
-      }],
-    })
-  } catch {
-    // ECharts not available
+  } catch (e) {
+    ElMessage.error('加载组织列表失败')
   }
 }
 
-function handleResize() {
-  chartInstance?.resize()
+async function onOrgChange() {
+  await loadPanels()
 }
 
-function startPolling() {
-  pollTimer = setInterval(loadData, 60000)
+async function loadPanels() {
+  if (!effectiveOrgId.value) {
+    ElMessage.warning('请先选择组织')
+    return
+  }
+  loading.value = true
+  try {
+    const res = await dashboardApi.listPanels(effectiveOrgId.value)
+    panels.value = res.items || []
+    rebuildGridLayout()
+    // 并行加载所有面板数据
+    await Promise.all(gridLayout.value.map((item) => loadPanelData(item)))
+  } catch (e) {
+    ElMessage.error('加载面板失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-onMounted(() => {
-  loadData()
-  startPolling()
-  window.addEventListener('resize', handleResize)
-})
+function rebuildGridLayout() {
+  gridLayout.value = panels.value.map((p) => ({
+    i: String(p.id),
+    x: p.grid_position?.x ?? 0,
+    y: p.grid_position?.y ?? 0,
+    w: p.grid_position?.w ?? 6,
+    h: p.grid_position?.h ?? 4,
+    panel: p,
+    data: null,
+    loading: false,
+    error: null,
+  }))
+}
 
-onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
-  chartInstance?.dispose()
-  window.removeEventListener('resize', handleResize)
+async function loadPanelData(item) {
+  item.loading = true
+  item.error = null
+  try {
+    const data = await dashboardApi.getPanelData(item.panel.id)
+    item.data = data
+  } catch (e) {
+    item.error = e?.response?.data?.detail || '数据加载失败'
+    item.data = null
+  } finally {
+    item.loading = false
+  }
+}
+
+function refreshPanel(item) {
+  loadPanelData(item)
+}
+
+let saveTimer = null
+function onLayoutUpdated() {
+  if (!editMode.value) return
+  // 防抖：拖拽停止 800ms 后保存
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(saveLayout, 800)
+}
+
+async function saveLayout() {
+  if (!effectiveOrgId.value) return
+  const layout = gridLayout.value.map((item) => ({
+    id: parseInt(item.i),
+    x: item.x,
+    y: item.y,
+    w: item.w,
+    h: item.h,
+  }))
+  try {
+    await dashboardApi.saveLayout(effectiveOrgId.value, layout)
+  } catch (e) {
+    ElMessage.error('布局保存失败')
+  }
+}
+
+function showAddPanel() {
+  editingPanel.value = {
+    id: null,
+    title: '',
+    source_type: 'iperf_recent',
+    chart_type: 'stat',
+    w: 6,
+    h: 4,
+  }
+  editingPanelCfg.value = { period: '1h' }
+  editorVisible.value = true
+}
+
+function editPanel(item) {
+  editingPanel.value = {
+    id: item.panel.id,
+    title: item.panel.title,
+    source_type: item.panel.source_type,
+    chart_type: item.panel.chart_type,
+    w: item.w,
+    h: item.h,
+  }
+  editingPanelCfg.value = { ...(item.panel.source_config || {}), period: item.panel.source_config?.period || '1h' }
+  if (item.panel.source_type === 'zabbix_item') {
+    loadZbxHosts()
+    if (editingPanelCfg.value.host_id) loadZbxItems(editingPanelCfg.value.host_id)
+  }
+  editorVisible.value = true
+}
+
+async function deletePanel(item) {
+  try {
+    await ElMessageBox.confirm(`确认删除面板「${item.panel.title}」？`, '删除确认', { type: 'warning' })
+  } catch { return }
+  try {
+    await dashboardApi.deletePanel(item.panel.id)
+    ElMessage.success('面板已删除')
+    loadPanels()
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
+}
+
+async function initDefaults() {
+  try {
+    await ElMessageBox.confirm('将清空当前面板并创建默认配置，确认？', '重置默认', { type: 'warning' })
+  } catch { return }
+  try {
+    // 先删除现有面板
+    for (const p of panels.value) {
+      await dashboardApi.deletePanel(p.id)
+    }
+    await dashboardApi.initDefaults(effectiveOrgId.value)
+    ElMessage.success('默认面板已创建')
+    loadPanels()
+  } catch (e) {
+    ElMessage.error('初始化失败')
+  }
+}
+
+function onSourceTypeChange() {
+  const st = editingPanel.value.source_type
+  if (st === 'zabbix_item') {
+    editingPanel.value.chart_type = 'line'
+    loadZbxHosts()
+  } else if (st === 'zabbix_problems') {
+    editingPanel.value.chart_type = 'table'
+  } else {
+    editingPanel.value.chart_type = 'stat'
+  }
+}
+
+async function loadZbxHosts() {
+  if (!effectiveOrgId.value) return
+  zbxHostLoading.value = true
+  try {
+    const res = await zabbixApi.orgHosts(effectiveOrgId.value)
+    zbxHosts.value = res.data || []
+  } catch (e) {
+    zbxHosts.value = []
+    ElMessage.warning('Zabbix 主机加载失败，请检查组织 Zabbix 配置')
+  } finally {
+    zbxHostLoading.value = false
+  }
+}
+
+async function onHostChange() {
+  editingPanelCfg.value.item_key = null
+  zbxItems.value = []
+  if (editingPanelCfg.value.host_id) {
+    await loadZbxItems(editingPanelCfg.value.host_id)
+  }
+}
+
+async function loadZbxItems(hostId) {
+  if (!effectiveOrgId.value) return
+  zbxItemLoading.value = true
+  try {
+    const res = await zabbixApi.orgItems(effectiveOrgId.value, hostId)
+    zbxItems.value = res.data || []
+  } catch (e) {
+    zbxItems.value = []
+  } finally {
+    zbxItemLoading.value = false
+  }
+}
+
+async function savePanel() {
+  if (!editingPanel.value.title) return ElMessage.warning('请输入面板标题')
+  saving.value = true
+  try {
+    const payload = {
+      title: editingPanel.value.title,
+      source_type: editingPanel.value.source_type,
+      source_config: editingPanel.value.source_type === 'zabbix_item' ? { ...editingPanelCfg.value } : {},
+      chart_type: editingPanel.value.chart_type,
+      grid_position: { x: 0, y: 99, w: editingPanel.value.w, h: editingPanel.value.h },
+    }
+    if (editingPanel.value.id) {
+      await dashboardApi.updatePanel(editingPanel.value.id, payload)
+      ElMessage.success('面板已更新')
+    } else {
+      await dashboardApi.createPanel(effectiveOrgId.value, payload)
+      ElMessage.success('面板已创建')
+    }
+    editorVisible.value = false
+    loadPanels()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.detail || '保存失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadOrgOptions()
+  await loadPanels()
 })
 </script>
 
 <style scoped>
-.dashboard-page {
+.dashboard-page { padding: 0; }
+.toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 8px 0;
 }
-
-.summary-grid {
-  row-gap: 12px;
+.toolbar-left { display: flex; align-items: center; }
+.toolbar-right { display: flex; align-items: center; gap: 8px; }
+.title { font-size: 18px; font-weight: 600; }
+.grid-wrapper { min-height: 200px; }
+.panel-card { height: 100%; }
+.panel-card :deep(.el-card__body) { height: calc(100% - 50px); overflow: auto; }
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-
-.summary-card {
-  min-height: 112px;
+.panel-title { font-weight: 600; font-size: 14px; }
+.panel-actions { display: flex; gap: 4px; }
+.panel-body {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
-.summary-card__label {
-  color: var(--ops-text-secondary);
+.panel-body.loading { opacity: 0.5; }
+.panel-error {
+  color: var(--el-color-danger);
   font-size: 13px;
+  text-align: center;
 }
-
-.summary-card__value {
-  color: var(--ops-text-primary);
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 42px;
-}
-
-.summary-card__note {
-  color: var(--ops-text-muted);
-  font-size: 12px;
-}
+.vue-grid-layout { min-height: 100px; }
 </style>

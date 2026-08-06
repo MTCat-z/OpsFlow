@@ -47,6 +47,7 @@ def login(
         "token_type": "bearer",
         "username": user.username,
         "role": user.role,
+        "org_id": user.org_id,
         "must_change_password": user.must_change_password,
     }
 

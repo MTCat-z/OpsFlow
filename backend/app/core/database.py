@@ -138,6 +138,7 @@ def create_db_and_tables():
     from app.models import asset, scan_task, iperf_task, broadband, topology, user  # noqa: F401
     from app.models import command, config_backup, inspection, ipam  # noqa: F401
     from app.models import organization  # noqa: F401
+    from app.models import dashboard_panel  # noqa: F401
     SQLModel.metadata.create_all(engine)
     # SQLite 和 PostgreSQL 都需要自动迁移补充列
     _migrate_columns()

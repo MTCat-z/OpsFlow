@@ -8,6 +8,7 @@ from app.api.v1 import (
     commands,
     config_backup,
     dashboard,
+    dashboard_panels,
     diagnostics,
     inspection,
     ipam,
@@ -30,6 +31,7 @@ _auth = [Depends(get_current_user)]
 api_router.include_router(users.router, prefix="/users", tags=["users"], dependencies=_auth)
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"], dependencies=_auth)
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"], dependencies=_auth)
+api_router.include_router(dashboard_panels.router, prefix="/dashboard/panels", tags=["dashboard-panels"], dependencies=_auth)
 api_router.include_router(assets.router, prefix="/assets", tags=["assets"], dependencies=_auth)
 api_router.include_router(scan.router, prefix="/scan", tags=["scan"], dependencies=_auth)
 api_router.include_router(iperf.router, prefix="/iperf", tags=["iperf"], dependencies=_auth)

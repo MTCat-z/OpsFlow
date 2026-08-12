@@ -10,6 +10,7 @@ import paramiko
 from app.core.database import Session, engine
 from app.core.security import decrypt
 from app.models.asset import Asset
+from app.services.command_guard import check_dangerous_commands
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,12 @@ def execute_ssh_command(asset_id: int, command: str, timeout: int = 30) -> dict:
         asset_name = asset.name
         ip = asset.ip_address
 
+    # 安全校验（纵深防御：即使调用方绕过了 API 层检查，此处仍拦截）
+    guard = check_dangerous_commands(command)
+    if not guard['safe']:
+        logger.warning('命令被安全策略拦截: %s', guard['reasons'])
+        return {'success': False, 'output': '', 'error': f'命令被安全策略拦截: {"; ".join(guard["reasons"][:3])}'}
+
     client = None
     try:
         client = _build_client(asset)
@@ -118,6 +125,12 @@ def execute_ssh_command_with_asset(asset: Asset, command: str, timeout: int = 30
     """
     if not asset.ip_address:
         return {'success': False, 'output': '', 'error': '资产未配置 IP 地址'}
+
+    # 安全校验（纵深防御：即使调用方绕过了 API 层检查，此处仍拦截）
+    guard = check_dangerous_commands(command)
+    if not guard['safe']:
+        logger.warning('命令被安全策略拦截: %s', guard['reasons'])
+        return {'success': False, 'output': '', 'error': f'命令被安全策略拦截: {"; ".join(guard["reasons"][:3])}'}
 
     client = None
     try:

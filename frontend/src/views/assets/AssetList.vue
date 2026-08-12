@@ -5,7 +5,7 @@
         <el-col :span="6"><el-input v-model="query.keyword" placeholder="搜索名称/IP/位置" clearable @change="loadData" /></el-col>
         <el-col :span="4"><el-select v-model="query.device_type" placeholder="设备类型" clearable @change="loadData"><el-option v-for="t in deviceTypes" :key="t.value" :label="t.label" :value="t.value" /></el-select></el-col>
         <el-col :span="4"><el-select v-model="query.status" placeholder="状态" clearable @change="loadData"><el-option label="在用" value="active" /><el-option label="停用" value="inactive" /></el-select></el-col>
-        <el-col :span="10" style="text-align:right"><el-button type="primary" @click="openCreate">新增资产</el-button><el-button @click="assetApi.export()">导出Excel</el-button></el-col>
+        <el-col :span="10" style="text-align:right"><el-button v-if="authStore.isOrgAdmin" type="primary" @click="openCreate">新增资产</el-button><el-button @click="assetApi.export()">导出Excel</el-button></el-col>
       </el-row>
     </el-card>
     <el-card shadow="never">
@@ -21,8 +21,8 @@
           <template #default="{ row }">
             <el-button v-if="authStore.isAdmin" size="small" @click="viewCred(row)">账号</el-button>
             <el-button size="small" type="success" @click="openTerminal(row)">终端</el-button>
-            <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="del(row)">删除</el-button>
+            <el-button v-if="authStore.isOrgAdmin" size="small" type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-if="authStore.isOrgAdmin" size="small" type="danger" @click="del(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

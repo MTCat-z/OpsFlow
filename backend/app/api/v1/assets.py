@@ -6,7 +6,7 @@ from sqlmodel import Session, select, col
 import io
 from app.core.database import get_session
 from app.core.security import encrypt, decrypt
-from app.core.auth import get_current_org, get_current_user, require_admin, check_org_access
+from app.core.auth import get_current_org, get_current_user, require_admin, require_org_admin, check_org_access
 from app.models.user import User
 from app.models.asset import Asset, AssetCreate, AssetRead, AssetUpdate, AssetCredentials
 
@@ -37,7 +37,7 @@ def list_assets(page: int=Query(1,ge=1), size: int=Query(20,ge=1,le=100), keywor
     return {'total': total, 'page': page, 'size': size, 'items': [_asset_to_read(a) for a in assets]}
 
 @router.post('', response_model=AssetRead, status_code=201)
-def create_asset(asset_in: AssetCreate, session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org)):
+def create_asset(asset_in: AssetCreate, session: Session=Depends(get_session), org_id: Optional[int]=Depends(get_current_org), admin: User=Depends(require_org_admin)):
     asset = Asset.model_validate(asset_in)
     asset.org_id = org_id
     for pf, ef in _CRED_FIELDS:
@@ -53,7 +53,7 @@ def get_asset(asset_id: int, session: Session=Depends(get_session), current_user
     return _asset_to_read(asset)
 
 @router.put('/{asset_id}', response_model=AssetRead)
-def update_asset(asset_id: int, asset_in: AssetUpdate, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
+def update_asset(asset_id: int, asset_in: AssetUpdate, session: Session=Depends(get_session), current_user: User=Depends(get_current_user), admin: User=Depends(require_org_admin)):
     asset = session.get(Asset, asset_id)
     if not asset or not check_org_access(asset, current_user): raise HTTPException(404, '资产不存在')
     data = asset_in.model_dump(exclude_unset=True)
@@ -66,7 +66,7 @@ def update_asset(asset_id: int, asset_in: AssetUpdate, session: Session=Depends(
     return _asset_to_read(asset)
 
 @router.delete('/{asset_id}', status_code=204)
-def delete_asset(asset_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user)):
+def delete_asset(asset_id: int, session: Session=Depends(get_session), current_user: User=Depends(get_current_user), admin: User=Depends(require_org_admin)):
     asset = session.get(Asset, asset_id)
     if not asset or not check_org_access(asset, current_user): raise HTTPException(404, '资产不存在')
     session.delete(asset); session.commit()

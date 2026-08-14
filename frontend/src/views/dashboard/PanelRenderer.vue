@@ -1,12 +1,13 @@
 <template>
   <div class="panel-renderer">
+    <!-- 数据源 error 优先展示（不视为 empty） -->
+    <div v-if="data?.error" class="panel-error">{{ data.error }}</div>
+
     <!-- 空数据 -->
-    <div v-if="isEmpty" class="empty">暂无数据</div>
+    <div v-else-if="isEmpty" class="empty">暂无数据</div>
 
     <!-- 折线图：Zabbix history -->
-    <div v-else-if="chartType === 'line'" class="chart-box">
-      <v-chart :option="lineOption" autoresize style="height: 100%; width: 100%" />
-    </div>
+    <div v-else-if="chartType === 'line'" ref="chartRef" class="chart-box"></div>
 
     <!-- 数值卡：iperf / scan / probe -->
     <div v-else-if="chartType === 'stat'" class="stat-box">
@@ -70,7 +71,7 @@
           <template #default="{ row }">{{ formatTime(row.clock) }}</template>
         </el-table-column>
       </el-table>
-      <div v-else class="empty">{{ data?.error || '无活跃告警' }}</div>
+      <div v-else class="empty">无活跃告警</div>
     </div>
 
     <div v-else class="empty">不支持的图表类型</div>
@@ -78,20 +79,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, TitleComponent } from 'echarts/components'
-import VChart from 'vue-echarts'
-
-use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, TitleComponent])
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   chartType: String,
   sourceType: String,
   data: Object,
 })
+
+const chartRef = ref(null)
+let chartInstance = null
+let resizeObserver = null
+let echartsModule = null
 
 const isEmpty = computed(() => {
   if (!props.data) return true
@@ -102,14 +101,12 @@ const isEmpty = computed(() => {
   return false
 })
 
-const lineOption = computed(() => {
+function buildLineOption() {
   const series = props.data?.series || []
   return {
     tooltip: { trigger: 'axis' },
     grid: { left: 50, right: 16, top: 16, bottom: 30 },
-    xAxis: {
-      type: 'time',
-    },
+    xAxis: { type: 'time' },
     yAxis: { type: 'value', scale: true },
     series: [{
       type: 'line',
@@ -120,7 +117,63 @@ const lineOption = computed(() => {
       areaStyle: { opacity: 0.1 },
     }],
   }
+}
+
+function hasSize() {
+  if (!chartRef.value) return false
+  const r = chartRef.value.getBoundingClientRect()
+  return r.width > 0 && r.height > 0
+}
+
+async function renderChart() {
+  if (props.chartType !== 'line' || !chartRef.value || isEmpty.value) return
+  await nextTick()
+  if (!echartsModule) echartsModule = await import('echarts')
+  // 容器尺寸还是 0 时（grid-item 仍在 transition）→ 等 ResizeObserver 触发再初始化
+  if (!hasSize()) return
+  if (!chartInstance) {
+    chartInstance = echartsModule.init(chartRef.value)
+  }
+  chartInstance.setOption(buildLineOption(), true)
+}
+
+function resizeChart() {
+  if (chartInstance) {
+    // 容器尺寸恢复后再 resize，避免 0 尺寸导致图表缩没
+    if (hasSize()) chartInstance.resize()
+  } else if (props.chartType === 'line' && hasSize()) {
+    // 之前因 0 尺寸跳过 init，现在尺寸可用了 → 重新渲染
+    renderChart()
+  }
+}
+
+watch(() => props.data, () => {
+  if (props.chartType === 'line') renderChart()
+}, { deep: true })
+
+onMounted(() => {
+  if (props.chartType === 'line') renderChart()
+  window.addEventListener('resize', resizeChart)
+  // 监听容器尺寸变化（拖拽 resize / editMode 切换 / 父布局变动）
+  if (chartRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => resizeChart())
+    resizeObserver.observe(chartRef.value)
+  }
 })
+
+onUnmounted(() => {
+  window.removeEventListener('resize', resizeChart)
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
+})
+
+defineExpose({ resize: resizeChart })
 
 function fmt(v) {
   if (v === null || v === undefined) return '—'
@@ -159,7 +212,14 @@ function severityType(s) {
   text-align: center;
   padding: 20px;
 }
-.chart-box { height: 100%; min-height: 200px; }
+.panel-error {
+  color: var(--el-color-danger);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+  word-break: break-all;
+}
+.chart-box { height: 100%; min-height: 200px; width: 100%; }
 .stat-box {
   display: flex;
   flex-direction: column;

@@ -32,6 +32,7 @@
         <grid-item
           v-for="item in gridLayout"
           :key="item.i"
+          :i="item.i"
           :x="item.x"
           :y="item.y"
           :w="item.w"
@@ -130,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { GridLayout, GridItem } from 'vue-grid-layout'
 import { dashboardApi, organizationApi, zabbixApi } from '@/api'
@@ -181,7 +182,17 @@ async function loadPanels() {
   loading.value = true
   try {
     const res = await dashboardApi.listPanels(effectiveOrgId.value)
-    panels.value = res.items || []
+    panels.value = res?.items || []
+    // 首次访问空大屏 → 自动初始化默认面板（后端幂等，已有配置会跳过）
+    if (panels.value.length === 0) {
+      try {
+        await dashboardApi.initDefaults(effectiveOrgId.value)
+        const res2 = await dashboardApi.listPanels(effectiveOrgId.value)
+        panels.value = res2?.items || []
+      } catch (e) {
+        // 初始化失败不阻断，仍展示空状态
+      }
+    }
     rebuildGridLayout()
     // 并行加载所有面板数据
     await Promise.all(gridLayout.value.map((item) => loadPanelData(item)))
@@ -325,7 +336,8 @@ async function loadZbxHosts() {
   zbxHostLoading.value = true
   try {
     const res = await zabbixApi.orgHosts(effectiveOrgId.value)
-    zbxHosts.value = res.data || []
+    // 后端返回 {items, total}；响应拦截器已剥外层 data
+    zbxHosts.value = res?.items || []
   } catch (e) {
     zbxHosts.value = []
     ElMessage.warning('Zabbix 主机加载失败，请检查组织 Zabbix 配置')
@@ -347,7 +359,7 @@ async function loadZbxItems(hostId) {
   zbxItemLoading.value = true
   try {
     const res = await zabbixApi.orgItems(effectiveOrgId.value, hostId)
-    zbxItems.value = res.data || []
+    zbxItems.value = res?.items || []
   } catch (e) {
     zbxItems.value = []
   } finally {
@@ -359,12 +371,18 @@ async function savePanel() {
   if (!editingPanel.value.title) return ElMessage.warning('请输入面板标题')
   saving.value = true
   try {
+    // 编辑时保留原 x/y，新增时才放到底部
+    let gridPos = { x: 0, y: 99, w: editingPanel.value.w, h: editingPanel.value.h }
+    if (editingPanel.value.id) {
+      const orig = gridLayout.value.find((it) => parseInt(it.i) === editingPanel.value.id)
+      if (orig) gridPos = { x: orig.x, y: orig.y, w: editingPanel.value.w, h: editingPanel.value.h }
+    }
     const payload = {
       title: editingPanel.value.title,
       source_type: editingPanel.value.source_type,
       source_config: editingPanel.value.source_type === 'zabbix_item' ? { ...editingPanelCfg.value } : {},
       chart_type: editingPanel.value.chart_type,
-      grid_position: { x: 0, y: 99, w: editingPanel.value.w, h: editingPanel.value.h },
+      grid_position: gridPos,
     }
     if (editingPanel.value.id) {
       await dashboardApi.updatePanel(editingPanel.value.id, payload)
@@ -385,6 +403,12 @@ async function savePanel() {
 onMounted(async () => {
   await loadOrgOptions()
   await loadPanels()
+})
+
+// 切换编辑模式后兜底触发图表 resize（手柄显隐可能引起容器尺寸微变）
+watch(editMode, async () => {
+  await nextTick()
+  window.dispatchEvent(new Event('resize'))
 })
 </script>
 

@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { User, Lock } from '@element-plus/icons-vue'
+import VueGridLayout from 'vue-grid-layout'
 
 // 命令式调用的 EP 组件样式（ElMessageBox/ElMessage 等 不在模板中使用，需要手动导入 CSS）
 import 'element-plus/es/components/message-box/style/css'
@@ -24,4 +25,5 @@ app.component('Lock', Lock)
 // 全局 locale 通过 App.vue 中的 ElConfigProvider 配置
 app.use(createPinia())
 app.use(router)
+app.use(VueGridLayout)
 app.mount('#app')

@@ -91,6 +91,8 @@ const chartRef = ref(null)
 let chartInstance = null
 let resizeObserver = null
 let echartsModule = null
+// 防止并发初始化创建多个 echarts 实例（ResizeObserver / window resize / props.data 同时触发）
+let initPromise = null
 
 const isEmpty = computed(() => {
   if (!props.data) return true
@@ -125,16 +127,44 @@ function hasSize() {
   return r.width > 0 && r.height > 0
 }
 
+function disposeChart() {
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+}
+
+function setupObserver() {
+  if (!chartRef.value || typeof ResizeObserver === 'undefined' || resizeObserver) return
+  resizeObserver = new ResizeObserver(() => resizeChart())
+  resizeObserver.observe(chartRef.value)
+}
+
 async function renderChart() {
   if (props.chartType !== 'line' || !chartRef.value || isEmpty.value) return
   await nextTick()
-  if (!echartsModule) echartsModule = await import('echarts')
-  // 容器尺寸还是 0 时（grid-item 仍在 transition）→ 等 ResizeObserver 触发再初始化
-  if (!hasSize()) return
-  if (!chartInstance) {
-    chartInstance = echartsModule.init(chartRef.value)
+  // 已有初始化进行中 → 复用同一份 Promise，避免产生多个 echarts 实例
+  if (initPromise) return initPromise
+  initPromise = (async () => {
+    if (!echartsModule) echartsModule = await import('echarts')
+    // await 期间 props 可能已变化（如 chartType 切走），再次校验
+    if (props.chartType !== 'line' || !chartRef.value || isEmpty.value) return
+    // 容器尺寸还是 0 时（grid-item 仍在 transition）→ 等 ResizeObserver 触发再初始化
+    if (!hasSize()) return
+    if (!chartInstance) {
+      chartInstance = echartsModule.init(chartRef.value)
+    }
+    chartInstance.setOption(buildLineOption(), true)
+  })()
+  try {
+    await initPromise
+  } finally {
+    initPromise = null
   }
-  chartInstance.setOption(buildLineOption(), true)
 }
 
 function resizeChart() {
@@ -151,26 +181,30 @@ watch(() => props.data, () => {
   if (props.chartType === 'line') renderChart()
 }, { deep: true })
 
-onMounted(() => {
-  if (props.chartType === 'line') renderChart()
-  window.addEventListener('resize', resizeChart)
-  // 监听容器尺寸变化（拖拽 resize / editMode 切换 / 父布局变动）
-  if (chartRef.value && typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(() => resizeChart())
-    resizeObserver.observe(chartRef.value)
+// chartType 切换时清理或恢复图表，防止非 line 类型下残留 echarts 实例和 ResizeObserver
+watch(() => props.chartType, async (newType) => {
+  if (newType !== 'line') {
+    // 等待可能正在进行的初始化完成后再 dispose，避免 dispose 后又创建出孤立实例
+    if (initPromise) await initPromise
+    disposeChart()
+  } else {
+    await nextTick()
+    setupObserver()
+    await renderChart()
   }
+})
+
+onMounted(() => {
+  if (props.chartType === 'line') {
+    renderChart()
+    setupObserver()
+  }
+  window.addEventListener('resize', resizeChart)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', resizeChart)
-  if (resizeObserver) {
-    resizeObserver.disconnect()
-    resizeObserver = null
-  }
-  if (chartInstance) {
-    chartInstance.dispose()
-    chartInstance = null
-  }
+  disposeChart()
 })
 
 defineExpose({ resize: resizeChart })

@@ -20,7 +20,7 @@
     <!-- 可拖拽面板网格 -->
     <div v-loading="loading" class="grid-wrapper">
       <grid-layout
-        v-model:layout="gridLayout"
+        v-model:layout="layoutData"
         :col-num="12"
         :row-height="40"
         :is-draggable="editMode"
@@ -30,7 +30,7 @@
         @layout-updated="onLayoutUpdated"
       >
         <grid-item
-          v-for="item in gridLayout"
+          v-for="item in layoutData"
           :key="item.i"
           :i="item.i"
           :x="item.x"
@@ -62,7 +62,7 @@
           </el-card>
         </grid-item>
       </grid-layout>
-      <el-empty v-if="!loading && gridLayout.length === 0" description="暂无面板，点击「重置默认」初始化" />
+      <el-empty v-if="!loading && layoutData.length === 0" description="暂无面板，点击「重置默认」初始化" />
     </div>
 
     <!-- 面板编辑器 -->
@@ -133,7 +133,6 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { GridLayout, GridItem } from 'vue-grid-layout'
 import { dashboardApi, organizationApi, zabbixApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import PanelRenderer from './PanelRenderer.vue'
@@ -142,7 +141,7 @@ const auth = useAuthStore()
 const loading = ref(false)
 const editMode = ref(false)
 const panels = ref([])
-const gridLayout = ref([])
+const layoutData = ref([])
 const orgOptions = ref([])
 const selectedOrgId = ref(null)
 const editorVisible = ref(false)
@@ -195,7 +194,7 @@ async function loadPanels() {
     }
     rebuildGridLayout()
     // 并行加载所有面板数据
-    await Promise.all(gridLayout.value.map((item) => loadPanelData(item)))
+    await Promise.all(layoutData.value.map((item) => loadPanelData(item)))
   } catch (e) {
     ElMessage.error('加载面板失败')
   } finally {
@@ -204,7 +203,7 @@ async function loadPanels() {
 }
 
 function rebuildGridLayout() {
-  gridLayout.value = panels.value.map((p) => ({
+  layoutData.value = panels.value.map((p) => ({
     i: String(p.id),
     x: p.grid_position?.x ?? 0,
     y: p.grid_position?.y ?? 0,
@@ -245,7 +244,7 @@ function onLayoutUpdated() {
 
 async function saveLayout() {
   if (!effectiveOrgId.value) return
-  const layout = gridLayout.value.map((item) => ({
+  const layout = layoutData.value.map((item) => ({
     id: parseInt(item.i),
     x: item.x,
     y: item.y,
@@ -313,9 +312,12 @@ async function initDefaults() {
     }
     await dashboardApi.initDefaults(effectiveOrgId.value)
     ElMessage.success('默认面板已创建')
-    loadPanels()
   } catch (e) {
     ElMessage.error('初始化失败')
+  } finally {
+    // 关键：无论删除/创建成功或失败，都重新加载面板列表
+    // 防止部分删除失败后 UI 与后端状态不一致，导致用户误以为数据仍在
+    await loadPanels()
   }
 }
 
@@ -374,7 +376,7 @@ async function savePanel() {
     // 编辑时保留原 x/y，新增时才放到底部
     let gridPos = { x: 0, y: 99, w: editingPanel.value.w, h: editingPanel.value.h }
     if (editingPanel.value.id) {
-      const orig = gridLayout.value.find((it) => parseInt(it.i) === editingPanel.value.id)
+      const orig = layoutData.value.find((it) => parseInt(it.i) === editingPanel.value.id)
       if (orig) gridPos = { x: orig.x, y: orig.y, w: editingPanel.value.w, h: editingPanel.value.h }
     }
     const payload = {

@@ -5,8 +5,25 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { resolve } from 'path'
 
+// Vitest 环境下 stub 掉 element-plus 等库的 CSS 导入，避免 jsdom 解析 .css 失败
+const testOnlyPlugins = process.env.VITEST
+  ? [{
+      name: 'css-stub',
+      enforce: 'pre',
+      resolveId(id) {
+        if (id.includes('element-plus') && (id.includes('/style/') || id.endsWith('.css'))) {
+          return `\0css-stub:${id}`
+        }
+      },
+      load(id) {
+        if (id.startsWith('\0css-stub:')) return ''
+      },
+    }]
+  : []
+
 export default defineConfig({
   plugins: [
+    ...testOnlyPlugins,
     vue(),
     AutoImport({
       resolvers: [ElementPlusResolver()],
@@ -48,5 +65,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['src/test/setup.js'],
+    css: true,
+    deps: {
+      inline: [/^element-plus/, 'vue-grid-layout'],
+    },
   },
 })

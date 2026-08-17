@@ -209,6 +209,32 @@ pull_latest_code() {
             fi
         fi
     else
+        # 区分网络故障与代码冲突：先单独 fetch 验证连通性
+        if ! git fetch origin 2>/dev/null; then
+            error "无法连接 GitHub（内网网络限制），不是代码冲突"
+            # 离线升级模式：本地 HEAD 已与上次成功拉取的 origin/main 一致时，仍可继续构建
+            local remote_ref local_head
+            remote_ref=$(git rev-parse origin/main 2>/dev/null || echo "")
+            local_head=$(git rev-parse HEAD 2>/dev/null || echo "")
+            if [[ -n "$remote_ref" && "$remote_ref" == "$local_head" ]]; then
+                warn "离线升级模式：本地代码已是最近一次成功拉取的版本"
+                local last_built=""
+                if [[ -f "$PROJECT_DIR/.last_built_commit" ]]; then
+                    last_built=$(cat "$PROJECT_DIR/.last_built_commit" 2>/dev/null || echo "")
+                fi
+                if [[ -n "$last_built" && "$last_built" == "$local_head" ]]; then
+                    success "已是最新且已构建，无需升级"
+                    NO_UPDATE=true
+                else
+                    warn "代码已更新但尚未构建（上次构建: ${last_built:-无}），继续执行升级"
+                    OLD_HEAD="${last_built:-$local_head}"
+                    NEW_HEAD="$local_head"
+                fi
+                return 0
+            fi
+            error "且本地代码落后于最近一次拉取的版本，请恢复网络后重试，或手动同步代码"
+            exit 1
+        fi
         error "Git pull 失败，可能是存在冲突"
         if [[ "$has_changes" == "true" ]]; then
             echo "  尝试: git stash pop 恢复本地修改后重试"

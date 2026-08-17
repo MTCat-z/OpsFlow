@@ -99,6 +99,8 @@ services:
       - backend
 
   # iperf3 服务端 — 中心节点，供探针测速（监听 5201，VPN 隧道 IP 可达）
+  # 注意: 必须前台运行（不带 -D）；-D 守护模式会 fork 后主进程退出，
+  # 导致 PID 1 退出、容器无限重启（曾累计重启 1.8 万次）
   iperf3_server:
     build:
       context: ../backend
@@ -106,7 +108,7 @@ services:
     container_name: ops_iperf3
     restart: unless-stopped
     network_mode: host
-    command: iperf3 -s -D && sleep infinity
+    command: ["iperf3", "-s"]
     depends_on:
       - backend
 

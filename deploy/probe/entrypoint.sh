@@ -17,7 +17,18 @@ else
     if [ -f /etc/wireguard/wg0.conf ]; then
         wg-quick up /etc/wireguard/wg0.conf 2>/dev/null || {
             echo "[VPN] wg-quick 失败，尝试 wireguard-go..."
-            wireguard-go wg0 2>/dev/null && wg setconf wg0 /etc/wireguard/wg0.conf
+            if wireguard-go wg0 2>/dev/null; then
+                # wg setconf 只认纯 wg 格式；直接喂 wg-quick 格式会因 Address 行
+                # 报 "Line unrecognized" 解析失败，必须先 strip 掉扩展行
+                wg-quick strip /etc/wireguard/wg0.conf > /tmp/wg0.raw.conf 2>/dev/null \
+                    && wg setconf wg0 /tmp/wg0.raw.conf 2>/dev/null || true
+                ip link set wg0 up 2>/dev/null || true
+                if [ -n "$WG_TUNNEL_IP" ]; then
+                    # wireguard-go 路径不会配置地址和路由，手动补齐，否则流量不进隧道
+                    ip addr add "$WG_TUNNEL_IP/32" dev wg0 2>/dev/null || true
+                    ip route replace "${WG_TUNNEL_IP%.*}.0/24" dev wg0 2>/dev/null || true
+                fi
+            fi
         }
         echo "[VPN] 等待隧道连通..."
         for i in $(seq 1 10); do

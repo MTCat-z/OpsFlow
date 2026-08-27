@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
         print("[init] ⚠️ 严重安全警告: SECRET_KEY 使用默认值，请立即在 .env 中修改！")
     create_db_and_tables()
     _seed_default_admin()
+    _sync_wireguard_peers()
     yield
 
 
@@ -46,6 +47,48 @@ def _seed_default_admin():
             print(f"[init] 已创建默认管理员: {settings.DEFAULT_ADMIN_USERNAME}")
             print(f"[init] 默认管理员密码: {password}")
             print(f"[init] ⚠️ 请立即登录并修改默认密码！")
+
+
+def _sync_wireguard_peers():
+    """启动时以数据库为准同步 wg0 的 peer 列表（幂等）
+
+    背景: add_peer() 只修改 wg0 运行时状态，不会写入 /etc/wireguard/wg0.conf；
+    服务器重启后 wg-quick 从配置文件恢复的是保存时刻的旧列表，之后通过
+    Web 界面新增的探针 peer 会丢失，导致隧道无法重建（探针握手被静默丢弃）。
+    每次启动时用数据库中的组织密钥重新同步，并清理数据库中已不存在的过期 peer。
+    """
+    from sqlmodel import Session, select
+    from app.core.database import engine
+    from app.models.organization import Organization
+    from app.services.wireguard_service import add_peer, remove_peer, get_peers
+
+    try:
+        desired: dict[str, str] = {}
+        with Session(engine) as session:
+            orgs = session.exec(
+                select(Organization).where(Organization.is_active == True)  # noqa: E712
+            ).all()
+            for org in orgs:
+                if org.wg_public_key and org.wg_tunnel_ip:
+                    desired[org.wg_public_key] = org.wg_tunnel_ip
+
+        current = get_peers()
+        if current is None:
+            print("[wg] wg0 接口不可用，跳过 peer 同步（开发环境属正常）", flush=True)
+            return
+
+        added, removed = 0, 0
+        for pub_key, tunnel_ip in desired.items():
+            if current.get(pub_key) != f"{tunnel_ip}/32":
+                if add_peer(pub_key, tunnel_ip):
+                    added += 1
+        for pub_key in current:
+            if pub_key not in desired:
+                if remove_peer(pub_key):
+                    removed += 1
+        print(f"[wg] WireGuard peer 同步完成: 新增 {added}, 移除 {removed}, 在册 {len(desired)} 个", flush=True)
+    except Exception as e:
+        print(f"[wg] ⚠️ WireGuard peer 同步失败: {e}（不影响服务启动）", flush=True)
 
 
 app = FastAPI(

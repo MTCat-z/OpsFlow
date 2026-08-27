@@ -82,6 +82,23 @@ def remove_peer(public_key: str) -> bool:
         return False
 
 
+def get_peers() -> Optional[dict[str, str]]:
+    """获取 wg0 当前所有 peer，返回 {公钥: allowed-ips}；接口不可用时返回 None"""
+    try:
+        result = subprocess.run(
+            ["wg", "show", WG_INTERFACE, "allowed-ips"],
+            capture_output=True, text=True, check=True
+        )
+        peers = {}
+        for line in result.stdout.strip().splitlines():
+            parts = line.split()
+            if parts:
+                peers[parts[0]] = parts[1] if len(parts) > 1 else ""
+        return peers
+    except Exception:
+        return None
+
+
 def get_server_public_key() -> Optional[str]:
     """获取中心服务器的 WireGuard 公钥"""
     try:

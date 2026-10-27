@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from app.tasks.worker import celery_app
 from app.core.database import engine
 from app.models.broadband import BroadbandContract
-from app.services.broadband_renewal import get_renewal_deadlines
+from app.services.broadband_renewal import get_next_renewal
 from app.services.dingtalk import send_renewal_reminder
 
 logger = logging.getLogger(__name__)
@@ -38,22 +38,13 @@ def _process_contract(session, contract, today, today_str):
         reminder_list = [int(d.strip()) for d in contract.reminder_days.split(',') if d.strip()]
     except (ValueError, AttributeError):
         reminder_list = [30, 15, 7]
-    renewal_deadlines = get_renewal_deadlines(
-        contract.contract_start, contract.contract_end, contract.renewal_cycle
-    )
-    nearest_deadline = None
-    nearest_days = None
-    deadline_type = None
-    for dl in renewal_deadlines:
-        dr = (dl - today).days
-        if dr < 0:
-            continue
-        if dr in reminder_list:
-            if nearest_deadline is None or dr < nearest_days:
-                nearest_deadline = dl
-                nearest_days = dr
-                deadline_type = 'cycle' if dl != contract.contract_end else 'contract_end'
-    if nearest_deadline is None:
+    # 与列表/详情/仪表盘/测试通知保持一致：认 last_renewed_date，
+    # 避免已续费后仍按旧周期截止日重复提醒
+    renewal = get_next_renewal(contract, today)
+    nearest_deadline = renewal['next_deadline']
+    nearest_days = renewal['days_remaining']
+    deadline_type = renewal['deadline_type']
+    if nearest_days < 0 or nearest_days not in reminder_list:
         return
     notified = []
     if contract.notified_dates:

@@ -50,7 +50,7 @@ def list_plans(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), 
 
 
 @router.post("/plans", response_model=InspectionPlanRead, status_code=201)
-def create_plan(data: InspectionPlanCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
+def create_plan(data: InspectionPlanCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org), admin: User = Depends(require_org_admin)):
     plan = InspectionPlan.model_validate(data)
     plan.org_id = org_id
     session.add(plan)
@@ -68,7 +68,7 @@ def get_plan(plan_id: int, session: Session = Depends(get_session), current_user
 
 
 @router.put("/plans/{plan_id}", response_model=InspectionPlanRead)
-def update_plan(plan_id: int, data: InspectionPlanUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_plan(plan_id: int, data: InspectionPlanUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     plan = session.get(InspectionPlan, plan_id)
     if not plan or not check_org_access(plan, current_user):
         raise HTTPException(404, "inspection plan not found")
@@ -82,7 +82,7 @@ def update_plan(plan_id: int, data: InspectionPlanUpdate, session: Session = Dep
 
 
 @router.delete("/plans/{plan_id}", status_code=204)
-def delete_plan(plan_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_plan(plan_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     plan = session.get(InspectionPlan, plan_id)
     if not plan or not check_org_access(plan, current_user):
         raise HTTPException(404, "inspection plan not found")

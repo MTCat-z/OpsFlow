@@ -1,6 +1,7 @@
 """
 内网运维集成工具平台 - FastAPI 主入口
 """
+import os
 import secrets
 from contextlib import asynccontextmanager
 
@@ -16,8 +17,10 @@ from app.core.database import create_db_and_tables
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期：启动时初始化数据库并创建默认管理员"""
-    if settings.SECRET_KEY == "change-me-in-production":
-        print("[init] ⚠️ 严重安全警告: SECRET_KEY 使用默认值，请立即在 .env 中修改！")
+    if settings.SECRET_KEY in ("change-me-in-production", "change-me-to-a-long-random-string", ""):
+        raise RuntimeError(
+            "[init] SECRET_KEY 仍为默认/占位值，拒绝启动。请在 backend/.env 中设置 32+ 位随机字符串"
+        )
     create_db_and_tables()
     _seed_default_admin()
     _sync_wireguard_peers()
@@ -44,9 +47,24 @@ def _seed_default_admin():
             )
             session.add(admin)
             session.commit()
-            print(f"[init] 已创建默认管理员: {settings.DEFAULT_ADMIN_USERNAME}")
-            print(f"[init] 默认管理员密码: {password}")
-            print(f"[init] ⚠️ 请立即登录并修改默认密码！")
+            if settings.DEFAULT_ADMIN_PASSWORD:
+                print(f"[init] 已创建默认管理员: {settings.DEFAULT_ADMIN_USERNAME}（初始密码来自 DEFAULT_ADMIN_PASSWORD 环境变量）")
+            else:
+                pwd_file = _write_initial_password(password)
+                print(f"[init] 已创建默认管理员: {settings.DEFAULT_ADMIN_USERNAME}，初始密码已写入 {pwd_file}（权限 600）")
+            print("[init] ⚠️ 首次登录后请立即修改密码，并删除初始密码文件。")
+
+
+def _write_initial_password(password: str) -> str:
+    """将随机生成的初始密码写入仅属主可读的文件，避免明文进入容器日志"""
+    db_path = settings.DATABASE_URL.replace("sqlite:///", "").replace("sqlite://", "")
+    data_dir = os.path.dirname(db_path) or "."
+    os.makedirs(data_dir, exist_ok=True)
+    pwd_file = os.path.join(data_dir, "initial_admin_password.txt")
+    fd = os.open(pwd_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(password + "\n")
+    return pwd_file
 
 
 def _sync_wireguard_peers():

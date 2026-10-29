@@ -86,6 +86,9 @@ def get_current_user(
     user = session.get(User, user_id)
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已禁用")
+    # 强制首次登录改密：仅允许访问改密接口，其余一律拒绝
+    if user.must_change_password and request.url.path != "/api/v1/auth/change-password":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="请先修改初始密码")
     # 把 request 挂上 user 供审计日志使用
     request.state.current_user = user
     return user

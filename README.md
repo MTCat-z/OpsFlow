@@ -138,7 +138,7 @@ curl http://127.0.0.1:8000/api/health
 Linux 模式:  http://<服务器IP>        (端口 80，host 网络)
 其他模式:    http://<服务器IP>:8080    (端口 8080，bridge 网络)
 API 文档:    http://<服务器IP>/api/docs (或 :8080/api/docs)
-默认账号:    admin / admin123
+默认账号:    admin（初始密码见后端启动日志中的 initial_admin_password.txt，首次登录需修改）
 ```
 
 首次登录会强制修改密码。

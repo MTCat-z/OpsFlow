@@ -48,7 +48,7 @@ def get_graph(
 # ---------- 节点管理 ----------
 
 @router.post('/nodes', response_model=TopologyNodeRead, status_code=201)
-def create_node(data: TopologyNodeCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
+def create_node(data: TopologyNodeCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org), admin: User = Depends(require_org_admin)):
     node = TopologyNode.model_validate(data, update={'is_manual': True})
     node.org_id = org_id
     session.add(node)
@@ -58,7 +58,7 @@ def create_node(data: TopologyNodeCreate, session: Session = Depends(get_session
 
 
 @router.put('/nodes/{node_id}', response_model=TopologyNodeRead)
-def update_node(node_id: int, data: TopologyNodeUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_node(node_id: int, data: TopologyNodeUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     node = session.get(TopologyNode, node_id)
     if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
@@ -72,7 +72,7 @@ def update_node(node_id: int, data: TopologyNodeUpdate, session: Session = Depen
 
 
 @router.patch('/nodes/{node_id}/position', response_model=TopologyNodeRead)
-def update_node_position(node_id: int, data: dict, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_node_position(node_id: int, data: dict, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     node = session.get(TopologyNode, node_id)
     if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
@@ -88,7 +88,7 @@ def update_node_position(node_id: int, data: dict, session: Session = Depends(ge
 
 
 @router.delete('/nodes/{node_id}', status_code=204)
-def delete_node(node_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_node(node_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     node = session.get(TopologyNode, node_id)
     if not node or not check_org_access(node, current_user):
         raise HTTPException(404, '节点不存在')
@@ -107,7 +107,7 @@ def delete_node(node_id: int, session: Session = Depends(get_session), current_u
 # ---------- 连线管理 ----------
 
 @router.post('/edges', response_model=TopologyEdgeRead, status_code=201)
-def create_edge(data: TopologyEdgeCreate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def create_edge(data: TopologyEdgeCreate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     # 验证节点存在
     src = session.get(TopologyNode, data.source_node_id)
     tgt = session.get(TopologyNode, data.target_node_id)
@@ -121,7 +121,7 @@ def create_edge(data: TopologyEdgeCreate, session: Session = Depends(get_session
 
 
 @router.delete('/edges/{edge_id}', status_code=204)
-def delete_edge(edge_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_edge(edge_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     edge = session.get(TopologyEdge, edge_id)
     if not edge or not check_org_access(edge, current_user):
         raise HTTPException(404, '连线不存在')

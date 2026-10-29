@@ -47,7 +47,7 @@ def list_subnets(
 
 
 @router.post("/subnets", response_model=IpamSubnetRead, status_code=201)
-def create_subnet(data: IpamSubnetCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
+def create_subnet(data: IpamSubnetCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org), admin: User = Depends(require_org_admin)):
     subnet = IpamSubnet.model_validate(data)
     subnet.org_id = org_id
     session.add(subnet)
@@ -57,7 +57,7 @@ def create_subnet(data: IpamSubnetCreate, session: Session = Depends(get_session
 
 
 @router.put("/subnets/{subnet_id}", response_model=IpamSubnetRead)
-def update_subnet(subnet_id: int, data: IpamSubnetUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_subnet(subnet_id: int, data: IpamSubnetUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     subnet = session.get(IpamSubnet, subnet_id)
     if not subnet or not check_org_access(subnet, current_user):
         raise HTTPException(404, "IPAM subnet not found")
@@ -71,7 +71,7 @@ def update_subnet(subnet_id: int, data: IpamSubnetUpdate, session: Session = Dep
 
 
 @router.delete("/subnets/{subnet_id}", status_code=204)
-def delete_subnet(subnet_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_subnet(subnet_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     subnet = session.get(IpamSubnet, subnet_id)
     if not subnet or not check_org_access(subnet, current_user):
         raise HTTPException(404, "IPAM subnet not found")
@@ -140,7 +140,7 @@ def list_addresses(
 
 
 @router.post("/addresses", response_model=IpamAddressRead, status_code=201)
-def create_address(data: IpamAddressCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org)):
+def create_address(data: IpamAddressCreate, session: Session = Depends(get_session), org_id: Optional[int] = Depends(get_current_org), admin: User = Depends(require_org_admin)):
     # IP 冲突检测
     existing = session.exec(
         select(IpamAddress).where(
@@ -160,7 +160,7 @@ def create_address(data: IpamAddressCreate, session: Session = Depends(get_sessi
 
 
 @router.put("/addresses/{address_id}", response_model=IpamAddressRead)
-def update_address(address_id: int, data: IpamAddressUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_address(address_id: int, data: IpamAddressUpdate, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     address = session.get(IpamAddress, address_id)
     if not address or not check_org_access(address, current_user):
         raise HTTPException(404, "IPAM address not found")
@@ -174,7 +174,7 @@ def update_address(address_id: int, data: IpamAddressUpdate, session: Session = 
 
 
 @router.delete("/addresses/{address_id}", status_code=204)
-def delete_address(address_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_address(address_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user), admin: User = Depends(require_org_admin)):
     address = session.get(IpamAddress, address_id)
     if not address or not check_org_access(address, current_user):
         raise HTTPException(404, "IPAM address not found")

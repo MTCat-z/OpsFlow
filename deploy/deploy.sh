@@ -109,7 +109,7 @@ show_help() {
 部署后访问:
   Linux 模式:  http://<服务器IP>      (端口 80)
   其他模式:    http://<服务器IP>:8080
-  默认账号:    admin / admin123
+  默认账号:    admin（初始密码见后端启动日志中的 initial_admin_password.txt）
 
 EOF
 }
@@ -653,8 +653,8 @@ verify_deployment() {
         echo -e "${GREEN}${BOLD}║${NC}  API 文档:  ${CYAN}http://${server_ip}:${WEB_PORT}/api/docs${NC}     ${GREEN}${BOLD}║${NC}"
         echo -e "${GREEN}${BOLD}║${NC}                                                      ${GREEN}${BOLD}║${NC}"
         echo -e "${GREEN}${BOLD}║${NC}  默认账号:  ${YELLOW}admin${NC}                                   ${GREEN}${BOLD}║${NC}"
-        echo -e "${GREEN}${BOLD}║${NC}  默认密码:  ${YELLOW}admin123${NC}                                ${GREEN}${BOLD}║${NC}"
-        echo -e "${GREEN}${BOLD}║${NC}  ${RED}⚠ 首次登录请立即修改密码！${NC}                         ${GREEN}${BOLD}║${NC}"
+        echo -e "${GREEN}${BOLD}║${NC}  初始密码:  见后端启动日志/数据目录密码文件  ${GREEN}${BOLD}║${NC}"
+        echo -e "${GREEN}${BOLD}║${NC}  ${RED}⚠ 首次登录请立即修改密码并删除该文件！${NC}              ${GREEN}${BOLD}║${NC}"
         echo -e "${GREEN}${BOLD}║${NC}                                                      ${GREEN}${BOLD}║${NC}"
         echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════════╝${NC}"
         echo ""
